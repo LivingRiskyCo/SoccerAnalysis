@@ -2333,11 +2333,17 @@ Home/End: First/Last frame"""
                         json.dump(config, f, indent=4)
                     
                     # 2. ALSO save to video directory as PlayerTagsSeed-{video_basename}.json (for analyzer)
-                    video_dir = os.path.dirname(os.path.abspath(self.video_path))
-                    video_basename = os.path.splitext(os.path.basename(self.video_path))[0]
-                    seed_file_video = os.path.join(video_dir, f"PlayerTagsSeed-{video_basename}.json")
-                    with open(seed_file_video, 'w') as f:
-                        json.dump(config, f, indent=4)
+                    if os.path.exists(self.video_path):
+                        try:
+                            video_dir = os.path.dirname(os.path.abspath(self.video_path))
+                            video_basename = os.path.splitext(os.path.basename(self.video_path))[0]
+                            seed_file_video = os.path.join(video_dir, f"PlayerTagsSeed-{video_basename}.json")
+                            # Ensure directory exists
+                            os.makedirs(video_dir, exist_ok=True)
+                            with open(seed_file_video, 'w') as f:
+                                json.dump(config, f, indent=4)
+                        except Exception as e:
+                            print(f"⚠ Could not save seed config to video directory: {e}")
                     
                     # Log what was saved
                     if total_anchor_count > 0:
