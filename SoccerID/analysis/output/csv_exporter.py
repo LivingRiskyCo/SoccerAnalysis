@@ -360,7 +360,11 @@ class CSVExporter:
             pass
     
     def close(self):
-        """Close CSV file"""
+        """Close CSV file (flushes any remaining buffer)"""
+        # Flush any remaining buffered rows
+        if self.write_buffer:
+            self._flush_buffer()
+        
         if self.csv_file:
             try:
                 self.csv_file.close()
