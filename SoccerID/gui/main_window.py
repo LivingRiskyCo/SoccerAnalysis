@@ -2129,6 +2129,9 @@ Playback Viewer:
                     except ImportError:
                         from setup_wizard import SetupWizard
             
+            # Minimize main window when Setup Wizard opens
+            self.root.iconify()  # Minimize the main window
+            
             # Temporarily remove topmost from main window to allow wizard to appear
             main_was_topmost = self.root.attributes('-topmost')
             if main_was_topmost:
@@ -2167,15 +2170,45 @@ Playback Viewer:
             wizard_window.update()  # Update window state immediately
             wizard_window.update_idletasks()  # Process all pending events
             
-            # Get video path if available
+            # Get video path and CSV path from project if available
             video_path = None
+            csv_path = None
+            
+            # Try to get from input/output file fields
             if hasattr(self, 'input_file') and self.input_file.get():
                 video_path = self.input_file.get()
                 if not os.path.exists(video_path):
                     video_path = None
             
-            # Pass video path to setup wizard for auto-loading
-            app = SetupWizard(wizard_window, video_path=video_path)
+            if hasattr(self, 'output_file') and self.output_file.get():
+                csv_path = self.output_file.get()
+                if not os.path.exists(csv_path):
+                    csv_path = None
+            
+            # Also try to get from current project if loaded
+            if not video_path or not csv_path:
+                try:
+                    if hasattr(self, 'current_project_path') and self.current_project_path:
+                        import json
+                        with open(self.current_project_path, 'r') as f:
+                            project_data = json.load(f)
+                        
+                        # Get video path from project
+                        if not video_path:
+                            video_path = project_data.get('analysis_settings', {}).get('input_file')
+                            if video_path and not os.path.exists(video_path):
+                                video_path = None
+                        
+                        # Get CSV path from project
+                        if not csv_path:
+                            csv_path = project_data.get('analysis_settings', {}).get('output_file')
+                            if csv_path and not os.path.exists(csv_path):
+                                csv_path = None
+                except:
+                    pass  # If project loading fails, just use what we have
+            
+            # Pass video and CSV paths to setup wizard for auto-loading
+            app = SetupWizard(wizard_window, video_path=video_path, csv_path=csv_path)
             
             # Ensure window is still visible after SetupWizard initialization
             wizard_window.deiconify()

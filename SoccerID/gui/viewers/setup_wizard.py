@@ -48,7 +48,7 @@ except ImportError:
 
 
 class SetupWizard:
-    def __init__(self, root, video_path=None):
+    def __init__(self, root, video_path=None, csv_path=None):
         self.root = root
         self.root.title("Interactive Setup Wizard - Player & Ball Calibration")
         # Larger window size for better visibility
@@ -231,6 +231,10 @@ class SetupWizard:
         # Auto-load video if path was provided (after widgets are created)
         if self.video_path and os.path.exists(self.video_path):
             self.root.after(500, self.auto_load_video)  # Delay to ensure GUI is fully ready
+        
+        # Auto-load CSV if path was provided
+        if self.csv_path and os.path.exists(self.csv_path):
+            self.root.after(700, lambda: self.load_csv_data(self.csv_path))  # Load CSV after video
     
     def _show_file_dialog(self, dialog_func, *args, **kwargs):
         """Helper function to show file dialogs above the wizard window"""
