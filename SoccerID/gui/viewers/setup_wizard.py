@@ -7215,12 +7215,18 @@ Home/End: First/Last frame"""
                 }
                 
                 # Save to video directory as PlayerTagsSeed-{video_basename}.json
-                video_dir = os.path.dirname(os.path.abspath(self.video_path))
-                video_basename = os.path.splitext(os.path.basename(self.video_path))[0]
-                seed_file_video = os.path.join(video_dir, f"PlayerTagsSeed-{video_basename}.json")
-                with open(seed_file_video, 'w') as f:
-                    json.dump(config, f, indent=4)
-                print(f"✓ Saved seed config (with player_roster) to: {seed_file_video}")
+                if self.video_path and os.path.exists(self.video_path):
+                    try:
+                        video_dir = os.path.dirname(os.path.abspath(self.video_path))
+                        video_basename = os.path.splitext(os.path.basename(self.video_path))[0]
+                        seed_file_video = os.path.join(video_dir, f"PlayerTagsSeed-{video_basename}.json")
+                        # Ensure directory exists
+                        os.makedirs(video_dir, exist_ok=True)
+                        with open(seed_file_video, 'w') as f:
+                            json.dump(config, f, indent=4)
+                        print(f"✓ Saved seed config (with player_roster) to: {seed_file_video}")
+                    except Exception as e:
+                        print(f"⚠ Could not save seed config to video directory: {e}")
                 seed_saved = True
             except Exception as e:
                 print(f"⚠ Could not save seed config: {e}")
@@ -7695,12 +7701,18 @@ Home/End: First/Last frame"""
                 print(f"✓ Saved seed config to: {seed_file_root}")
                 
                 # 2. ALSO save to video directory as PlayerTagsSeed-{video_basename}.json (for analyzer)
-                video_dir = os.path.dirname(os.path.abspath(self.video_path))
-                video_basename = os.path.splitext(os.path.basename(self.video_path))[0]
-                seed_file_video = os.path.join(video_dir, f"PlayerTagsSeed-{video_basename}.json")
-                with open(seed_file_video, 'w') as f:
-                    json.dump(config, f, indent=4)
-                print(f"✓ Saved seed config to: {seed_file_video}")
+                if self.video_path and os.path.exists(self.video_path):
+                    try:
+                        video_dir = os.path.dirname(os.path.abspath(self.video_path))
+                        video_basename = os.path.splitext(os.path.basename(self.video_path))[0]
+                        seed_file_video = os.path.join(video_dir, f"PlayerTagsSeed-{video_basename}.json")
+                        # Ensure directory exists
+                        os.makedirs(video_dir, exist_ok=True)
+                        with open(seed_file_video, 'w') as f:
+                            json.dump(config, f, indent=4)
+                        print(f"✓ Saved seed config to: {seed_file_video}")
+                    except Exception as e:
+                        print(f"⚠ Could not save seed config to video directory: {e}")
                 
                 # Store seed_file for use in workflow message
                 seed_file = seed_file_video
