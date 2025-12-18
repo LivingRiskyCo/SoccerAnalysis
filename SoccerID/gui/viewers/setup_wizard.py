@@ -315,7 +315,10 @@ class SetupWizard:
                 # Just update frame_var if it exists
                 if hasattr(self, 'frame_var'):
                     self.frame_var.set(0)
-                self.status_label.config(text=f"Video: {os.path.basename(self.video_path)} ({self.total_frames} frames)")
+                video_name = os.path.basename(self.video_path)
+                self.status_label.config(text=f"Video: {video_name} ({self.total_frames} frames)")
+                # Update window title to show video name
+                self.root.title(f"Interactive Setup Wizard - {video_name}")
                 self.init_button.config(state=tk.NORMAL)
                 
                 # Load first frame
@@ -7260,11 +7263,14 @@ Home/End: First/Last frame"""
                             self.cap = None
                         else:
                             # Frame slider was moved to nav bar, no longer exists here
-                # Just update frame_var if it exists
-                if hasattr(self, 'frame_var'):
-                    self.frame_var.set(0)
-                            status_text = f"Video: {os.path.basename(backup_video)} ({self.total_frames} frames)"
+                            # Just update frame_var if it exists
+                            if hasattr(self, 'frame_var'):
+                                self.frame_var.set(0)
+                            video_name = os.path.basename(backup_video)
+                            status_text = f"Video: {video_name} ({self.total_frames} frames)"
                             self.status_label.config(text=str(status_text))
+                            # Update window title to show video name
+                            self.root.title(f"Interactive Setup Wizard - {video_name}")
                         self.init_button.config(state=tk.NORMAL)
                         
                         # Restore frame position
