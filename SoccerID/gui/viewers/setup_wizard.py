@@ -296,14 +296,26 @@ class SetupWizard:
         try:
             if csv_path and os.path.exists(csv_path):
                 self.csv_data = pd.read_csv(csv_path)
+                self.csv_path = csv_path  # Store the path
                 print(f"✓ Loaded CSV data: {len(self.csv_data)} rows from {os.path.basename(csv_path)}")
-                # Update status label if available
-                if hasattr(self, 'status_label'):
-                    current_text = self.status_label.cget("text")
-                    if "CSV:" not in current_text:
-                        self.status_label.config(text=f"{current_text} | CSV: {os.path.basename(csv_path)}")
+                # Update CSV file label
+                if hasattr(self, 'csv_file_label'):
+                    self.csv_file_label.config(text=f"CSV: {os.path.basename(csv_path)}")
         except Exception as e:
             print(f"⚠ Could not load CSV data: {e}")
+            if hasattr(self, 'csv_file_label'):
+                self.csv_file_label.config(text="CSV: Error loading file")
+    
+    def load_csv_file(self):
+        """Load CSV file manually"""
+        filename = self._show_file_dialog(
+            filedialog.askopenfilename,
+            title="Load CSV Tracking Data",
+            filetypes=[("CSV files", "*.csv"), ("All files", "*.*")]
+        )
+        if filename:
+            self.csv_path = filename
+            self.load_csv_data(filename)
     
     def auto_load_video(self):
         """Auto-load video if path was provided"""
