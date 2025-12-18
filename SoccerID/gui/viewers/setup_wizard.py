@@ -34,9 +34,13 @@ try:
     from ultralytics import YOLO
     import supervision as sv
     YOLO_AVAILABLE = True
-except ImportError:
+    SUPERVISION_AVAILABLE = True
+except ImportError as e:
     YOLO_AVAILABLE = False
+    SUPERVISION_AVAILABLE = False
+    print(f"Warning: YOLO/supervision import failed: {e}")
     print("Warning: YOLO not available. Setup wizard requires YOLO.")
+    print("Note: If packages are installed, you may be using a different Python environment.")
 
 # OC-SORT tracker import (better occlusion handling)
 try:
@@ -2435,8 +2439,22 @@ Home/End: First/Last frame"""
             return
         
         if not YOLO_AVAILABLE:
-            messagebox.showerror("Error", "YOLO not available. Please install ultralytics.")
-            return
+            # Try to import again with more detailed error message
+            try:
+                from ultralytics import YOLO
+                import supervision as sv
+                # If we get here, YOLO is actually available - update the flag
+                global YOLO_AVAILABLE
+                YOLO_AVAILABLE = True
+                print("✓ YOLO and supervision successfully imported")
+            except ImportError as e:
+                error_msg = f"YOLO not available. Please install ultralytics.\n\nError: {e}\n\nTry: pip install ultralytics supervision"
+                messagebox.showerror("Error", error_msg)
+                return
+            except Exception as e:
+                error_msg = f"YOLO import failed: {e}\n\nTry: pip install ultralytics supervision"
+                messagebox.showerror("Error", error_msg)
+                return
         
         # Disable button during initialization
         self.init_button.config(state=tk.DISABLED)
