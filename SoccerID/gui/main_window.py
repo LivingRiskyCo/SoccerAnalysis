@@ -2139,11 +2139,16 @@ Playback Viewer:
             wizard_window.geometry("1600x1050")
             wizard_window.transient(self.root)
             
-            # Ensure window is visible and on top
-            wizard_window.deiconify()  # Make sure window is not minimized
+            # Force window to be shown and visible
+            wizard_window.withdraw()  # Hide first to ensure clean state
+            wizard_window.update()
+            wizard_window.deiconify()  # Show window
+            wizard_window.state('normal')  # Ensure normal state (not minimized/maximized)
             wizard_window.lift(self.root)  # Bring to front, above parent
             wizard_window.attributes('-topmost', True)  # Force to top
-            wizard_window.focus_force()  # Force focus
+            wizard_window.focus_set()  # Set focus
+            wizard_window.focus_force()  # Force focus (works on Windows)
+            wizard_window.grab_set()  # Grab focus (modal behavior)
             wizard_window.update()  # Update window state immediately
             
             # Get video path if available
@@ -2158,12 +2163,17 @@ Playback Viewer:
             
             # Ensure window is still visible after SetupWizard initialization
             wizard_window.deiconify()
+            wizard_window.state('normal')
             wizard_window.lift(self.root)  # Bring above parent again
+            wizard_window.focus_set()
+            wizard_window.focus_force()
             wizard_window.update()
+            wizard_window.update_idletasks()  # Process all pending events
             
-            # Remove topmost after a short delay, and restore main window topmost if it was set
+            # Remove topmost and grab after a short delay, and restore main window topmost if it was set
             def cleanup_topmost():
                 wizard_window.attributes('-topmost', False)
+                wizard_window.grab_release()  # Release grab after window is shown
                 if main_was_topmost:
                     self.root.attributes('-topmost', True)
             

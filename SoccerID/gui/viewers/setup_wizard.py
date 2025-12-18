@@ -58,9 +58,15 @@ class SetupWizard:
         self.root.resizable(True, True)  # Allow manual resizing but prevent automatic
         
         # Ensure window is visible and on top
-        self.root.deiconify()  # Make sure window is not minimized
+        self.root.withdraw()  # Hide first to ensure clean state
+        self.root.update()
+        self.root.deiconify()  # Show window
+        self.root.state('normal')  # Ensure normal state (not minimized/maximized)
         self.root.lift()  # Bring to front
+        self.root.focus_set()  # Set focus
+        self.root.focus_force()  # Force focus (works on Windows)
         self.root.update()  # Update window state immediately
+        self.root.update_idletasks()  # Process all pending events
         
         # Video and model
         self.video_path = video_path  # Allow video path to be passed in
