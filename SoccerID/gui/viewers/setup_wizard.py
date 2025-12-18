@@ -7039,8 +7039,10 @@ Home/End: First/Last frame"""
                         backup_files.sort(key=lambda f: os.path.getmtime(os.path.join(backup_dir, f)), reverse=True)
                         most_recent_backup = os.path.join(backup_dir, backup_files[0])
                         
-                        with open(most_recent_backup, 'r') as f:
-                            config = json.load(f)
+                        # Validate backup file exists before trying to open it
+                        if os.path.exists(most_recent_backup):
+                            with open(most_recent_backup, 'r') as f:
+                                config = json.load(f)
                             
                             # Check if backup is for same video
                             backup_video = config.get("video_path")
