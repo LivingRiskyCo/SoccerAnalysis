@@ -260,6 +260,20 @@ class SetupWizard:
         
         return result
     
+    def load_csv_data(self, csv_path):
+        """Load CSV tracking data if available"""
+        try:
+            if csv_path and os.path.exists(csv_path):
+                self.csv_data = pd.read_csv(csv_path)
+                print(f"✓ Loaded CSV data: {len(self.csv_data)} rows from {os.path.basename(csv_path)}")
+                # Update status label if available
+                if hasattr(self, 'status_label'):
+                    current_text = self.status_label.cget("text")
+                    if "CSV:" not in current_text:
+                        self.status_label.config(text=f"{current_text} | CSV: {os.path.basename(csv_path)}")
+        except Exception as e:
+            print(f"⚠ Could not load CSV data: {e}")
+    
     def auto_load_video(self):
         """Auto-load video if path was provided"""
         if self.video_path and os.path.exists(self.video_path):
