@@ -1306,26 +1306,11 @@ class SetupWizard:
         ttk.Button(goto_track_frame, text="📋 List IDs", command=self.show_track_id_list, width=12).pack(side=tk.LEFT, padx=2)
         self.goto_track_entry.bind("<Return>", lambda e: self.goto_track_id())
         
-        # Zoom controls
-        zoom_controls_frame = ttk.Frame(nav_frame)
-        zoom_controls_frame.pack(pady=5)
-        
-        ttk.Label(zoom_controls_frame, text="Zoom:").pack(side=tk.LEFT, padx=5)
-        ttk.Button(zoom_controls_frame, text="🔍+", command=self.zoom_in, width=5).pack(side=tk.LEFT, padx=2)
-        ttk.Button(zoom_controls_frame, text="🔍-", command=self.zoom_out, width=5).pack(side=tk.LEFT, padx=2)
-        ttk.Button(zoom_controls_frame, text="Reset", command=self.zoom_reset, width=8).pack(side=tk.LEFT, padx=2)
-        self.zoom_label = ttk.Label(zoom_controls_frame, text="100%")
-        self.zoom_label.pack(side=tk.LEFT, padx=5)
-        
-        ttk.Label(zoom_controls_frame, text="(Ctrl+/- to zoom, Right-click to pan)", 
-                 font=("Arial", 7), foreground="gray").pack(side=tk.LEFT, padx=10)
-        
-        # Frame slider
-        self.frame_var = tk.IntVar()
-        self.frame_slider = ttk.Scale(nav_frame, from_=0, to=100, 
-                                     orient=tk.HORIZONTAL, variable=self.frame_var,
-                                     command=self.on_slider_change)
-        self.frame_slider.pack(fill=tk.X, pady=5)
+        # Note: Zoom controls and frame slider have been moved to the horizontal navigation bar above the video frame
+        # They are no longer in the right-side controls panel
+        # Initialize frame_var if not already initialized (it's used throughout the code)
+        if not hasattr(self, 'frame_var'):
+            self.frame_var = tk.IntVar()
         
         # Event Marker System controls (if available)
         if EVENT_MARKER_AVAILABLE and self.event_marker_system:
