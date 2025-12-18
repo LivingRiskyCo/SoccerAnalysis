@@ -201,12 +201,18 @@ class Detector:
             logger.error(f"Error detecting players: {e}", exc_info=True)
             return []
     
-    def detect_players_batch(self, frames: List[np.ndarray]) -> List[List[Dict[str, Any]]]:
+    def detect_players_batch(self, frames: List[np.ndarray], 
+                            min_player_height: int = 30,
+                            max_player_height: int = 200,
+                            field_mask: Optional[np.ndarray] = None) -> List[List[Dict[str, Any]]]:
         """
-        Detect players in multiple frames using batch processing
+        Detect players in multiple frames using optimized batch processing
         
         Args:
             frames: List of input frames
+            min_player_height: Minimum player height in pixels
+            max_player_height: Maximum player height in pixels
+            field_mask: Optional field mask to filter detections
             
         Returns:
             List of detection lists (one per frame)
@@ -215,19 +221,24 @@ class Detector:
             return [[] for _ in frames]
         
         try:
+            # Use slightly lower threshold for batch processing (we'll filter after)
+            detection_conf = max(0.2, self.confidence_threshold - 0.05)
+            
             # Process in batches
             all_detections = []
             for i in range(0, len(frames), self.batch_size):
                 batch_frames = frames[i:i+self.batch_size]
                 
-                # Run YOLO detection on batch
-                # Note: YOLO's predict can handle batches, but we need to format correctly
-                results = self.model(batch_frames, conf=self.confidence_threshold, 
+                # Run YOLO detection on batch (YOLO handles batches efficiently)
+                results = self.model(batch_frames, conf=detection_conf, 
                                    iou=self.iou_threshold, verbose=False)
                 
-                # Process results
-                for result in results:
+                # Process results with filtering
+                for frame_idx, result in enumerate(results):
+                    frame = batch_frames[frame_idx]
+                    frame_height, frame_width = frame.shape[:2]
                     detections = []
+                    
                     if hasattr(result, 'boxes') and result.boxes is not None:
                         boxes = result.boxes
                         for box in boxes:
@@ -236,11 +247,45 @@ class Detector:
                                 xyxy = box.xyxy[0].cpu().numpy()
                                 confidence = float(box.conf[0].cpu().numpy())
                                 
-                                detections.append({
-                                    'bbox': xyxy.tolist(),
-                                    'confidence': confidence,
-                                    'class_id': 0
-                                })
+                                # Calculate bbox dimensions
+                                x1, y1, x2, y2 = xyxy
+                                width = x2 - x1
+                                height = y2 - y1
+                                center_x = (x1 + x2) / 2
+                                center_y = (y1 + y2) / 2
+                                
+                                # Apply filters (same as detect_players)
+                                if height < min_player_height or height > max_player_height:
+                                    continue
+                                
+                                aspect_ratio = height / width if width > 0 else 0
+                                if aspect_ratio < 1.2:
+                                    continue
+                                
+                                if field_mask is not None:
+                                    try:
+                                        mask_y = int(np.clip(center_y, 0, field_mask.shape[0] - 1))
+                                        mask_x = int(np.clip(center_x, 0, field_mask.shape[1] - 1))
+                                        if not field_mask[mask_y, mask_x]:
+                                            continue
+                                    except (IndexError, ValueError):
+                                        pass
+                                
+                                # Confidence adjustment
+                                size_score = min(height / 100.0, 1.0)
+                                center_score = 1.0 - abs(center_x - frame_width/2) / (frame_width/2) if frame_width > 0 else 1.0
+                                center_score = max(0.5, center_score)
+                                adjusted_confidence = confidence * (0.7 + 0.3 * size_score * center_score)
+                                
+                                if adjusted_confidence >= self.confidence_threshold:
+                                    detections.append({
+                                        'bbox': xyxy.tolist(),
+                                        'confidence': adjusted_confidence,
+                                        'class_id': 0,
+                                        'height': height,
+                                        'width': width,
+                                        'center': (center_x, center_y)
+                                    })
                     all_detections.append(detections)
             
             # Ensure we return one list per input frame
@@ -252,7 +297,7 @@ class Detector:
         except Exception as e:
             logger.error(f"Error in batch detection: {e}", exc_info=True)
             # Fallback to individual detection
-            return [self.detect_players(frame) for frame in frames]
+            return [self.detect_players(frame, min_player_height, max_player_height, field_mask) for frame in frames]
     
     def detect_ball(self, frame: np.ndarray, 
                    min_radius: int = 5, 

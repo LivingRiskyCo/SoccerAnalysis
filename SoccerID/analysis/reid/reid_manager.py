@@ -125,6 +125,10 @@ class ReIDManager:
         # Track history for temporal consistency (track_id -> list of recent matches)
         self.track_match_history: Dict[int, List[Dict[str, Any]]] = {}
         
+        # Feature cache to avoid redundant extractions (track_id -> features)
+        self.feature_cache: Dict[int, Any] = {}
+        self.feature_cache_max_size = 100  # Cache up to 100 tracks
+        
         # Initialize jersey OCR
         self.use_jersey_ocr = use_jersey_ocr and OCR_AVAILABLE
         self.jersey_ocr = None
@@ -257,9 +261,61 @@ class ReIDManager:
             else:
                 detections_sv = detections
             
-            # Extract Re-ID features if frame is provided
+            # Extract Re-ID features if frame is provided (with caching)
+            reid_features = None
             if frame is not None:
-                reid_features = self.reid_tracker.extract_features(frame, detections_sv)
+                # Check cache first for stable tracks
+                cached_features = []
+                uncached_indices = []
+                
+                for i, det in enumerate(detections):
+                    track_id = det.get('track_id')
+                    if track_id is not None and track_id in self.feature_cache:
+                        cached_features.append((i, self.feature_cache[track_id]))
+                    else:
+                        uncached_indices.append(i)
+                
+                # Extract features only for uncached detections
+                if uncached_indices:
+                    uncached_detections = [detections[i] for i in uncached_indices]
+                    # Convert to sv.Detections format
+                    import supervision as sv
+                    import numpy as np
+                    boxes = [d.get('bbox', []) for d in uncached_detections]
+                    confidences = [d.get('confidence', 0.0) for d in uncached_detections]
+                    if boxes:
+                        uncached_sv = sv.Detections(
+                            xyxy=np.array(boxes),
+                            confidence=np.array(confidences)
+                        )
+                        new_features = self.reid_tracker.extract_features(frame, uncached_sv)
+                        
+                        # Cache new features
+                        for idx, feat in zip(uncached_indices, new_features):
+                            track_id = detections[idx].get('track_id')
+                            if track_id is not None:
+                                # Manage cache size
+                                if len(self.feature_cache) >= self.feature_cache_max_size:
+                                    # Remove oldest (simple FIFO)
+                                    oldest_key = next(iter(self.feature_cache))
+                                    del self.feature_cache[oldest_key]
+                                self.feature_cache[track_id] = feat
+                                cached_features.append((idx, feat))
+                    else:
+                        new_features = []
+                else:
+                    new_features = []
+                
+                # Reconstruct features list in original order
+                if cached_features or new_features:
+                    all_features = [None] * len(detections)
+                    for idx, feat in cached_features:
+                        all_features[idx] = feat
+                    for idx, feat in zip(uncached_indices, new_features):
+                        all_features[idx] = feat
+                    reid_features = [f for f in all_features if f is not None]
+                else:
+                    reid_features = []
             else:
                 reid_features = None
             
