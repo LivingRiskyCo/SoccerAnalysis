@@ -269,10 +269,14 @@ class SetupWizard:
             self.height = int(height_val) if height_val and not np.isnan(height_val) else 0
             
             if self.total_frames > 0:
-                self.frame_slider.config(to=max(1, self.total_frames - 1))
-                self.frame_var.set(0)
+                # Frame slider was moved to nav bar, but we still need to update frame_var
+                if hasattr(self, 'frame_var'):
+                    self.frame_var.set(0)
                 self.current_frame_num = 0
-                self.status_label.config(text=f"Video: {os.path.basename(self.video_path)} ({self.total_frames} frames)")
+                video_name = os.path.basename(self.video_path)
+                self.status_label.config(text=f"Video: {video_name} ({self.total_frames} frames)")
+                # Also update window title to show video name
+                self.root.title(f"Interactive Setup Wizard - {video_name}")
                 self.init_button.config(state=tk.NORMAL)
                 
                 # Auto-load ball positions and player mappings if they exist
@@ -307,7 +311,10 @@ class SetupWizard:
                     self.cap = None
                     return
                 
-                self.frame_slider.config(to=max(1, self.total_frames - 1))
+                # Frame slider was moved to nav bar, no longer exists here
+                # Just update frame_var if it exists
+                if hasattr(self, 'frame_var'):
+                    self.frame_var.set(0)
                 self.status_label.config(text=f"Video: {os.path.basename(self.video_path)} ({self.total_frames} frames)")
                 self.init_button.config(state=tk.NORMAL)
                 
@@ -2300,11 +2307,15 @@ Home/End: First/Last frame"""
             self.cap = None
             return
         
-        self.frame_slider.config(to=max(1, self.total_frames - 1))
-        self.frame_var.set(0)
+        # Frame slider was moved to nav bar, but we still need to update frame_var
+        if hasattr(self, 'frame_var'):
+            self.frame_var.set(0)
         self.current_frame_num = 0
         
-        self.status_label.config(text=f"Video: {os.path.basename(filename)} ({self.total_frames} frames)")
+        video_name = os.path.basename(filename)
+        self.status_label.config(text=f"Video: {video_name} ({self.total_frames} frames)")
+        # Also update window title to show video name
+        self.root.title(f"Interactive Setup Wizard - {video_name}")
         self.init_button.config(state=tk.NORMAL)
         
         # Auto-load ball positions and player mappings if they exist for this video
@@ -7248,7 +7259,10 @@ Home/End: First/Last frame"""
                             self.cap.release()
                             self.cap = None
                         else:
-                            self.frame_slider.config(to=max(1, self.total_frames - 1))
+                            # Frame slider was moved to nav bar, no longer exists here
+                # Just update frame_var if it exists
+                if hasattr(self, 'frame_var'):
+                    self.frame_var.set(0)
                             status_text = f"Video: {os.path.basename(backup_video)} ({self.total_frames} frames)"
                             self.status_label.config(text=str(status_text))
                         self.init_button.config(state=tk.NORMAL)
