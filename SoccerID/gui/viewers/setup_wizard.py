@@ -2264,7 +2264,13 @@ Home/End: First/Last frame"""
             # Also save seed config backup
             backup_dir = "setup_wizard_backups"
             if not os.path.exists(backup_dir):
-                os.makedirs(backup_dir)
+                # Create backup directory if it doesn't exist, with error handling
+                try:
+                    os.makedirs(backup_dir, exist_ok=True)
+                except OSError as e:
+                    print(f"⚠ Could not create backup directory {backup_dir}: {e}")
+                    # Fall back to current directory if backup directory creation fails
+                    backup_dir = "."
             
             backup_file = os.path.join(backup_dir, f"seed_config_backup_{int(self.root.winfo_id())}.json")
             
