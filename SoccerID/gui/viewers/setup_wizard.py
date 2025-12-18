@@ -219,12 +219,34 @@ class SetupWizard:
         
         self.create_widgets()
         
-        # Auto-load video if provided
-        if self.video_path and os.path.exists(self.video_path):
-            self.root.after(100, self.auto_load_video)  # Delay slightly to ensure GUI is ready
-        
         # Start auto-save timer
         self.start_auto_save()
+        
+        # Auto-load video if path was provided (after widgets are created)
+        if self.video_path and os.path.exists(self.video_path):
+            self.root.after(500, self.auto_load_video)  # Delay to ensure GUI is fully ready
+    
+    def _show_file_dialog(self, dialog_func, *args, **kwargs):
+        """Helper function to show file dialogs above the wizard window"""
+        # Temporarily remove topmost to allow file dialog to appear
+        was_topmost = self.root.attributes('-topmost')
+        if was_topmost:
+            self.root.attributes('-topmost', False)
+            self.root.update()
+        
+        # Ensure parent is set for the dialog
+        if 'parent' not in kwargs:
+            kwargs['parent'] = self.root
+        
+        try:
+            result = dialog_func(*args, **kwargs)
+        finally:
+            # Restore topmost if it was set
+            if was_topmost:
+                self.root.attributes('-topmost', True)
+                self.root.update()
+        
+        return result
     
     def auto_load_video(self):
         """Auto-load video if path was provided"""
@@ -2257,7 +2279,8 @@ Home/End: First/Last frame"""
     
     def load_video(self):
         """Load video file"""
-        filename = filedialog.askopenfilename(
+        filename = self._show_file_dialog(
+            filedialog.askopenfilename,
             title="Select Video File",
             filetypes=[("Video files", "*.mp4 *.avi *.mov *.mkv *.m4v"), ("All files", "*.*")]
         )
@@ -7430,7 +7453,8 @@ Home/End: First/Last frame"""
             "current_frame": int(self.current_frame_num)
         }
         
-        filename = filedialog.asksaveasfilename(
+        filename = self._show_file_dialog(
+            filedialog.asksaveasfilename,
             title="Save Seed Configuration",
             defaultextension=".json",
             filetypes=[("JSON files", "*.json"), ("All files", "*.*")]
@@ -8091,7 +8115,8 @@ Home/End: First/Last frame"""
             default_path = self.event_marker_system.save_to_file()
             messagebox.showinfo("Markers Saved", f"Saved {len(self.event_marker_system.markers)} markers to:\n{default_path}")
         else:
-            filename = filedialog.asksaveasfilename(
+            filename = self._show_file_dialog(
+                filedialog.asksaveasfilename,
                 title="Save Event Markers",
                 defaultextension=".json",
                 filetypes=[("JSON files", "*.json"), ("All files", "*.*")]
@@ -8118,7 +8143,8 @@ Home/End: First/Last frame"""
                     self.update_timeline_display()
                     return
         
-        filename = filedialog.askopenfilename(
+        filename = self._show_file_dialog(
+            filedialog.askopenfilename,
             title="Load Event Markers",
             filetypes=[("JSON files", "*.json"), ("All files", "*.*")]
         )
