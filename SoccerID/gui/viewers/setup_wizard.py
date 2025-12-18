@@ -2377,6 +2377,25 @@ Home/End: First/Last frame"""
             # This ensures we have player mappings and Re-ID information available during initialization
             self.auto_load_seed_data()
             
+            # Load anchor frames and populate approved_mappings BEFORE Re-ID matching
+            if hasattr(self, 'anchor_frames') and self.anchor_frames:
+                print(f"✓ Loading {len(self.anchor_frames)} anchor frames to pre-populate player mappings")
+                for frame_num, anchors in self.anchor_frames.items():
+                    # Handle both string and integer frame numbers
+                    frame_key = frame_num if isinstance(frame_num, int) else int(frame_num)
+                    for anchor in anchors:
+                        track_id = anchor.get("track_id")
+                        player_name = anchor.get("player_name")
+                        team = anchor.get("team", "")
+                        jersey_number = anchor.get("jersey_number", "")
+                        
+                        if track_id is not None and player_name:
+                            tid_str = str(int(track_id))
+                            # Pre-populate approved_mappings with anchor frame data
+                            if tid_str not in self.approved_mappings:
+                                self.approved_mappings[tid_str] = (player_name, team, jersey_number)
+                                print(f"  → Anchor frame {frame_key}: Track #{track_id} → '{player_name}'")
+            
             # Ensure player gallery is loaded
             if self.player_gallery is None:
                 try:
@@ -2567,7 +2586,40 @@ Home/End: First/Last frame"""
             self.current_frame_num = frame_num
             self.current_detections = detections
             
+            # First, check if this frame has anchor frames and use them
+            frame_key_str = str(frame_num)
+            frame_key_int = frame_num
+            if frame_key_str in self.anchor_frames or frame_key_int in self.anchor_frames:
+                anchors = self.anchor_frames.get(frame_key_str) or self.anchor_frames.get(frame_key_int, [])
+                for anchor in anchors:
+                    track_id = anchor.get("track_id")
+                    player_name = anchor.get("player_name")
+                    team = anchor.get("team", "")
+                    jersey_number = anchor.get("jersey_number", "")
+                    
+                    if track_id is not None and player_name:
+                        tid_str = str(int(track_id))
+                        # Find the detection with this track_id
+                        for i, tid in enumerate(detections.tracker_id):
+                            if tid is not None and int(tid) == int(track_id):
+                                # Use anchor frame data to populate mapping
+                                self.approved_mappings[tid_str] = (player_name, team, jersey_number)
+                                print(f"✓ Using anchor frame {frame_num}: Track #{track_id} → '{player_name}'")
+                                
+                                # Store position for tracking
+                                if i < len(detections.xyxy):
+                                    bbox = detections.xyxy[i]
+                                    center_x = (bbox[0] + bbox[2]) / 2.0
+                                    center_y = (bbox[1] + bbox[3]) / 2.0
+                                    if player_name not in self.player_positions:
+                                        self.player_positions[player_name] = []
+                                    self.player_positions[player_name].append((frame_num, center_x, center_y, int(track_id)))
+                                    if len(self.player_positions[player_name]) > 10:
+                                        self.player_positions[player_name] = self.player_positions[player_name][-10:]
+                                break
+            
             # Match detections to gallery (this will auto-tag high-confidence matches)
+            # Note: match_detections_to_gallery will skip already-mapped detections
             self.match_detections_to_gallery(frame)
             
             # Also use seed mappings to pre-populate tags
@@ -4327,9 +4379,10 @@ Home/End: First/Last frame"""
             if track_id is None or track_id in self.rejected_ids:
                 continue
             
-            # Skip if already tagged
+            # Skip if already tagged (including from anchor frames)
             tid_str = str(int(track_id))
             if tid_str in self.approved_mappings:
+                # Already mapped - skip Re-ID matching to avoid overwriting anchor frame data
                 continue
             
             # Get Re-ID features for this detection (upper body)
