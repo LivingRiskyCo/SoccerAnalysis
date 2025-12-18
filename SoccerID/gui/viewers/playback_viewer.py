@@ -4707,47 +4707,47 @@ class PlaybackViewer:
                             
                             # Draw background for analytics (semi-transparent)
                             if len(analytics_lines) > 0:
-                            max_line_width = 0
-                            for line in analytics_lines:
-                                (w, h), _ = cv2.getTextSize(line, font_face, font_scale, thickness)
-                                max_line_width = max(max_line_width, w)
-                            
-                            # Draw semi-transparent background
-                            # Safety check: ensure coordinates are valid
-                            rect_x1 = x + 40
-                            rect_y1 = analytics_y - 2
-                            rect_x2 = x + 40 + max_line_width + 8
-                            rect_y2 = analytics_y + len(analytics_lines) * line_height + 2
-                            
-                            # Ensure coordinates are within frame bounds
-                            h, w = display_frame.shape[:2]
-                            rect_x1 = max(0, min(rect_x1, w - 1))
-                            rect_y1 = max(0, min(rect_y1, h - 1))
-                            rect_x2 = max(rect_x1 + 1, min(rect_x2, w))
-                            rect_y2 = max(rect_y1 + 1, min(rect_y2, h))
-                            
-                            if rect_x2 > rect_x1 and rect_y2 > rect_y1:
-                                overlay = display_frame.copy()
-                                cv2.rectangle(overlay,
-                                             (rect_x1, rect_y1),
-                                             (rect_x2, rect_y2),
-                                             (0, 0, 0), -1)  # Black background
-                                cv2.addWeighted(overlay, 0.6, display_frame, 0.4, 0, display_frame)
-                            
-                            # Draw analytics text with better thickness and contrast
-                            for i, line in enumerate(analytics_lines[:5]):  # Limit to 5 lines to avoid clutter
-                                text_y = analytics_y + i * line_height
-                                self.csv_hd_renderer.draw_crisp_text(
-                                    display_frame,
-                                    line,
-                                    (x + 44, text_y),
-                                    font_face,
-                                    font_scale,
-                                    analytics_color,
-                                    thickness,
-                                    outline_color=(0, 0, 0),
-                                    outline_thickness=max(1, thickness // 2)  # Thicker outline for better contrast
-                                )
+                                max_line_width = 0
+                                for line in analytics_lines:
+                                    (w, h), _ = cv2.getTextSize(line, font_face, font_scale, thickness)
+                                    max_line_width = max(max_line_width, w)
+                                
+                                # Draw semi-transparent background
+                                # Safety check: ensure coordinates are valid
+                                rect_x1 = x + 40
+                                rect_y1 = analytics_y - 2
+                                rect_x2 = x + 40 + max_line_width + 8
+                                rect_y2 = analytics_y + len(analytics_lines) * line_height + 2
+                                
+                                # Ensure coordinates are within frame bounds
+                                h, w = display_frame.shape[:2]
+                                rect_x1 = max(0, min(rect_x1, w - 1))
+                                rect_y1 = max(0, min(rect_y1, h - 1))
+                                rect_x2 = max(rect_x1 + 1, min(rect_x2, w))
+                                rect_y2 = max(rect_y1 + 1, min(rect_y2, h))
+                                
+                                if rect_x2 > rect_x1 and rect_y2 > rect_y1:
+                                    overlay = display_frame.copy()
+                                    cv2.rectangle(overlay,
+                                                 (rect_x1, rect_y1),
+                                                 (rect_x2, rect_y2),
+                                                 (0, 0, 0), -1)  # Black background
+                                    cv2.addWeighted(overlay, 0.6, display_frame, 0.4, 0, display_frame)
+                                
+                                # Draw analytics text with better thickness and contrast
+                                for i, line in enumerate(analytics_lines[:5]):  # Limit to 5 lines to avoid clutter
+                                    text_y = analytics_y + i * line_height
+                                    self.csv_hd_renderer.draw_crisp_text(
+                                        display_frame,
+                                        line,
+                                        (x + 44, text_y),
+                                        font_face,
+                                        font_scale,
+                                        analytics_color,
+                                        thickness,
+                                        outline_color=(0, 0, 0),
+                                        outline_thickness=max(1, thickness // 2)  # Thicker outline for better contrast
+                                    )
         
         # Draw analytics in panel/banner/bar position if enabled and not "with_player"
         if self.show_analytics.get() and frame_num in self.analytics_data:
