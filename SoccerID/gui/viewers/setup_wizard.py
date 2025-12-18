@@ -2382,6 +2382,9 @@ Home/End: First/Last frame"""
         
         video_name = os.path.basename(filename)
         self.status_label.config(text=f"Video: {video_name} ({self.total_frames} frames)")
+        # Update video file label
+        if hasattr(self, 'video_file_label'):
+            self.video_file_label.config(text=f"Video: {video_name}")
         # Also update window title to show video name
         self.root.title(f"Interactive Setup Wizard - {video_name}")
         self.init_button.config(state=tk.NORMAL)
