@@ -264,10 +264,6 @@ class SetupWizard:
         # Auto-load CSV if path was provided
         if self.csv_path and os.path.exists(self.csv_path):
             self.root.after(700, lambda: self.load_csv_data(self.csv_path))  # Load CSV after video
-        
-        # Auto-load CSV if path was provided
-        if self.csv_path and os.path.exists(self.csv_path):
-            self.root.after(700, lambda: self.load_csv_data(self.csv_path))  # Load CSV after video
     
     def _show_file_dialog(self, dialog_func, *args, **kwargs):
         """Helper function to show file dialogs above the wizard window"""
