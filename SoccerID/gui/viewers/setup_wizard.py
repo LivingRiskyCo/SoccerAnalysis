@@ -3,6 +3,22 @@ Interactive Setup Wizard
 Frame-by-frame player tagging and ball verification to seed tracking
 """
 
+import sys
+import os
+from pathlib import Path
+
+# Add parent directories to path for imports (since root moved to SoccerID)
+current_file = Path(__file__).resolve()
+# SoccerID/gui/viewers/setup_wizard.py -> SoccerID -> soccer_analysis
+soccerid_dir = current_file.parent.parent.parent  # SoccerID directory
+parent_dir = soccerid_dir.parent  # soccer_analysis directory
+
+# Add paths for imports
+if str(parent_dir) not in sys.path:
+    sys.path.insert(0, str(parent_dir))
+if str(soccerid_dir) not in sys.path:
+    sys.path.insert(0, str(soccerid_dir))
+
 import cv2
 import numpy as np
 import pandas as pd
@@ -10,7 +26,6 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox, simpledialog
 from PIL import Image, ImageTk
 import json
-import os
 from collections import defaultdict
 
 # Try new structure imports first, fallback to legacy
@@ -30,25 +45,87 @@ except ImportError:
             EVENT_MARKER_AVAILABLE = False
             print("Warning: Event marker system not available")
 
+# Try to import YOLO and supervision (may be in parent directory or installed packages)
+YOLO_AVAILABLE = False
+SUPERVISION_AVAILABLE = False
 try:
     from ultralytics import YOLO
     import supervision as sv
     YOLO_AVAILABLE = True
     SUPERVISION_AVAILABLE = True
 except ImportError as e:
-    YOLO_AVAILABLE = False
-    SUPERVISION_AVAILABLE = False
-    print(f"Warning: YOLO/supervision import failed: {e}")
-    print("Warning: YOLO not available. Setup wizard requires YOLO.")
-    print("Note: If packages are installed, you may be using a different Python environment.")
+    # Try importing from parent directory if not in site-packages
+    try:
+        import importlib.util
+        # Check if ultralytics is available via pip but not in path
+        import subprocess
+        result = subprocess.run(['python', '-m', 'pip', 'show', 'ultralytics'], 
+                              capture_output=True, text=True, timeout=5)
+        if result.returncode == 0:
+            # Package is installed, try importing again with explicit path
+            from ultralytics import YOLO
+            import supervision as sv
+            YOLO_AVAILABLE = True
+            SUPERVISION_AVAILABLE = True
+            print("✓ YOLO and supervision found after path adjustment")
+        else:
+            raise ImportError(f"ultralytics not installed: {e}")
+    except Exception as e2:
+        YOLO_AVAILABLE = False
+        SUPERVISION_AVAILABLE = False
+        print(f"Warning: YOLO/supervision import failed: {e}")
+        print("Warning: YOLO not available. Setup wizard requires YOLO.")
+        print("Note: If packages are installed, you may be using a different Python environment.")
+        print(f"Install with: pip install ultralytics supervision")
 
 # OC-SORT tracker import (better occlusion handling)
+# Try multiple import paths since root moved to SoccerID
+OCSORT_AVAILABLE = False
+BOXMOT_AVAILABLE = False
 try:
     from ocsort_tracker import OCSortTracker
     OCSORT_AVAILABLE = True
+    print("✓ Loaded OC-SORT tracker from current path")
 except ImportError:
-    OCSORT_AVAILABLE = False
-    print("Warning: OC-SORT tracker not available. Will use ByteTrack as fallback.")
+    try:
+        # Try importing from parent directory (soccer_analysis/ocsort_tracker.py)
+        import importlib.util
+        ocsort_path = os.path.join(parent_dir, 'ocsort_tracker.py')
+        if os.path.exists(ocsort_path):
+            spec = importlib.util.spec_from_file_location("ocsort_tracker", ocsort_path)
+            ocsort_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(ocsort_module)
+            OCSortTracker = ocsort_module.OCSortTracker
+            OCSORT_AVAILABLE = True
+            print("✓ Loaded OC-SORT tracker from parent directory")
+    except Exception as e:
+        print(f"Warning: OC-SORT tracker import failed: {e}")
+
+# Try to import BoxMOT trackers (OcSort, BotSort, etc.)
+try:
+    from boxmot import OcSort, BotSort, DeepOcSort, StrongSort
+    from boxmot_tracker_wrapper import BoxMOTTrackerWrapper, create_tracker
+    BOXMOT_AVAILABLE = True
+    print("✓ BoxMOT trackers available")
+except ImportError:
+    try:
+        # Try importing from parent directory
+        import importlib.util
+        boxmot_wrapper_path = os.path.join(parent_dir, 'boxmot_tracker_wrapper.py')
+        if os.path.exists(boxmot_wrapper_path):
+            spec = importlib.util.spec_from_file_location("boxmot_tracker_wrapper", boxmot_wrapper_path)
+            boxmot_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(boxmot_module)
+            BoxMOTTrackerWrapper = boxmot_module.BoxMOTTrackerWrapper
+            create_tracker = boxmot_module.create_tracker
+            BOXMOT_AVAILABLE = True
+            print("✓ Loaded BoxMOT wrapper from parent directory")
+    except Exception as e:
+        print(f"Warning: BoxMOT not available: {e}")
+        BOXMOT_AVAILABLE = False
+
+if not OCSORT_AVAILABLE and not BOXMOT_AVAILABLE:
+    print("Warning: OC-SORT/BoxMOT trackers not available. Will use ByteTrack as fallback.")
 
 
 class SetupWizard:
