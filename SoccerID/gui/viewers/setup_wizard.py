@@ -326,6 +326,9 @@ class SetupWizard:
                 self.current_frame_num = 0
                 video_name = os.path.basename(self.video_path)
                 self.status_label.config(text=f"Video: {video_name} ({self.total_frames} frames)")
+                # Update video file label
+                if hasattr(self, 'video_file_label'):
+                    self.video_file_label.config(text=f"Video: {video_name}")
                 # Also update window title to show video name
                 self.root.title(f"Interactive Setup Wizard - {video_name}")
                 self.init_button.config(state=tk.NORMAL)
@@ -368,6 +371,9 @@ class SetupWizard:
                     self.frame_var.set(0)
                 video_name = os.path.basename(self.video_path)
                 self.status_label.config(text=f"Video: {video_name} ({self.total_frames} frames)")
+                # Update video file label
+                if hasattr(self, 'video_file_label'):
+                    self.video_file_label.config(text=f"Video: {video_name}")
                 # Update window title to show video name
                 self.root.title(f"Interactive Setup Wizard - {video_name}")
                 self.init_button.config(state=tk.NORMAL)
@@ -1201,6 +1207,14 @@ class SetupWizard:
         # Status and progress on second row
         self.status_label = ttk.Label(button_row2, text="Load a video to begin", foreground="gray")
         self.status_label.pack(side=tk.LEFT, padx=10)
+        
+        # Video file label - shows loaded video file name
+        self.video_file_label = ttk.Label(button_row2, text="", foreground="blue", font=("Arial", 9))
+        self.video_file_label.pack(side=tk.LEFT, padx=10)
+        
+        # CSV file label - shows loaded CSV file name
+        self.csv_file_label = ttk.Label(button_row2, text="", foreground="green", font=("Arial", 9))
+        self.csv_file_label.pack(side=tk.LEFT, padx=10)
         
         # Progress indicator
         self.progress_label = ttk.Label(button_row2, text="", foreground="blue")

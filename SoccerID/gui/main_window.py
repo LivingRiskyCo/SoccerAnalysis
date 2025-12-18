@@ -2140,7 +2140,9 @@ Playback Viewer:
             wizard_window = tk.Toplevel(self.root)
             wizard_window.title("Setup Wizard")
             wizard_window.geometry("1600x1050")
-            wizard_window.transient(self.root)
+            # Don't use transient() as it can prevent minimize/maximize buttons on some systems
+            # Instead, use attributes to keep it on top when needed
+            # wizard_window.transient(self.root)  # Commented out to allow minimize/maximize
             
             # Ensure window has minimize and maximize buttons
             wizard_window.overrideredirect(False)  # Standard window controls
@@ -2148,6 +2150,28 @@ Playback Viewer:
             try:
                 if hasattr(wizard_window, 'attributes'):
                     wizard_window.attributes('-toolwindow', False)  # Not a toolwindow (shows in taskbar)
+                    # On Windows, ensure the window style includes minimize/maximize buttons
+                    # Try to set window style directly using Windows API if available
+                    try:
+                        import ctypes
+                        from ctypes import wintypes
+                        hwnd = wizard_window.winfo_id()
+                        if hwnd:
+                            # Get current window style
+                            GWL_STYLE = -16
+                            WS_MINIMIZEBOX = 0x00020000
+                            WS_MAXIMIZEBOX = 0x00010000
+                            WS_SYSMENU = 0x00080000
+                            
+                            # Get current style
+                            current_style = ctypes.windll.user32.GetWindowLongW(hwnd, GWL_STYLE)
+                            # Add minimize and maximize buttons
+                            new_style = current_style | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU
+                            ctypes.windll.user32.SetWindowLongW(hwnd, GWL_STYLE, new_style)
+                            # Force window to redraw
+                            ctypes.windll.user32.SetWindowPos(hwnd, 0, 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0020)
+                    except:
+                        pass  # If Windows API fails, fall back to Tkinter defaults
             except:
                 pass
             
