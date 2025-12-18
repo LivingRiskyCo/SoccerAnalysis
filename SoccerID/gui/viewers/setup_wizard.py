@@ -57,9 +57,24 @@ class SetupWizard:
         # Prevent window from resizing on canvas updates
         self.root.resizable(True, True)  # Allow manual resizing but prevent automatic
         
-        # Ensure window is visible and on top
+        # Ensure window is visible and on top - use aggressive Windows-specific approach
         self.root.withdraw()  # Hide first to ensure clean state
         self.root.update()
+        self.root.update_idletasks()
+        
+        # Try Windows-specific window activation (if available)
+        try:
+            import ctypes
+            # Get window handle and force activation
+            hwnd = self.root.winfo_id()
+            if hwnd:
+                # Force window to foreground (Windows API)
+                ctypes.windll.user32.ShowWindow(hwnd, 1)  # SW_SHOWNORMAL
+                ctypes.windll.user32.SetForegroundWindow(hwnd)
+                ctypes.windll.user32.BringWindowToTop(hwnd)
+        except:
+            pass  # Fallback to Tkinter methods
+        
         self.root.deiconify()  # Show window
         self.root.state('normal')  # Ensure normal state (not minimized/maximized)
         self.root.lift()  # Bring to front

@@ -2139,9 +2139,24 @@ Playback Viewer:
             wizard_window.geometry("1600x1050")
             wizard_window.transient(self.root)
             
-            # Force window to be shown and visible
+            # Force window to be shown and visible - use aggressive Windows-specific approach
             wizard_window.withdraw()  # Hide first to ensure clean state
             wizard_window.update()
+            wizard_window.update_idletasks()
+            
+            # Try Windows-specific window activation (if available)
+            try:
+                import ctypes
+                # Get window handle and force activation
+                hwnd = wizard_window.winfo_id()
+                if hwnd:
+                    # Force window to foreground (Windows API)
+                    ctypes.windll.user32.ShowWindow(hwnd, 1)  # SW_SHOWNORMAL
+                    ctypes.windll.user32.SetForegroundWindow(hwnd)
+                    ctypes.windll.user32.BringWindowToTop(hwnd)
+            except:
+                pass  # Fallback to Tkinter methods
+            
             wizard_window.deiconify()  # Show window
             wizard_window.state('normal')  # Ensure normal state (not minimized/maximized)
             wizard_window.lift(self.root)  # Bring to front, above parent
@@ -2150,6 +2165,7 @@ Playback Viewer:
             wizard_window.focus_force()  # Force focus (works on Windows)
             wizard_window.grab_set()  # Grab focus (modal behavior)
             wizard_window.update()  # Update window state immediately
+            wizard_window.update_idletasks()  # Process all pending events
             
             # Get video path if available
             video_path = None
