@@ -54,8 +54,14 @@ class SetupWizard:
         # Larger window size for better visibility
         self.root.geometry("1920x1200")
         self.root.minsize(1600, 1000)  # Minimum size
-        # Prevent window from resizing on canvas updates
-        self.root.resizable(True, True)  # Allow manual resizing but prevent automatic
+        # Allow manual resizing and ensure minimize/maximize buttons are visible
+        self.root.resizable(True, True)
+        # Ensure window has standard title bar controls (minimize, maximize, close)
+        # This is the default, but we make sure overrideredirect is not set
+        try:
+            self.root.overrideredirect(False)  # Ensure standard window controls are visible
+        except:
+            pass  # If already False, that's fine
         
         # Ensure window is visible and on top - use aggressive Windows-specific approach
         self.root.withdraw()  # Hide first to ensure clean state
@@ -283,8 +289,9 @@ class SetupWizard:
                         if hasattr(self, 'marker_stats_label'):
                             self.update_marker_statistics()
                 
-                # Delay frame loading slightly more to ensure canvas is fully rendered
-                self.root.after(200, self.load_frame)
+                # Load first frame immediately and also after a delay to ensure canvas is fully rendered
+                self.root.after(100, self.load_frame)
+                self.root.after(300, self.load_frame)  # Backup in case first one doesn't work
             if self.cap.isOpened():
                 self.fps = self.cap.get(cv2.CAP_PROP_FPS) or 30.0
                 frame_count = self.cap.get(cv2.CAP_PROP_FRAME_COUNT)
@@ -2303,8 +2310,9 @@ Home/End: First/Last frame"""
         # Auto-load ball positions and player mappings if they exist for this video
         self.auto_load_seed_data()
         
-        # Delay frame loading slightly to ensure canvas is fully rendered
-        self.root.after(200, self.load_frame)
+        # Load first frame immediately and also after a delay to ensure canvas is fully rendered
+        self.root.after(100, self.load_frame)
+        self.root.after(300, self.load_frame)  # Backup in case first one doesn't work
     
     def initialize_detection(self):
         """Initialize YOLO model and tracker"""
