@@ -1095,6 +1095,50 @@ class SetupWizard:
         self.progress_label = ttk.Label(button_row2, text="", foreground="blue")
         self.progress_label.pack(side=tk.LEFT, padx=10)
         
+        # Navigation controls - horizontal bar above video frame
+        nav_bar = ttk.Frame(main_frame, padding="5")
+        nav_bar.pack(fill=tk.X, pady=5)
+        
+        # Play/Pause button
+        self.play_button = ttk.Button(nav_bar, text="▶ Play", command=self.toggle_playback, width=12)
+        self.play_button.pack(side=tk.LEFT, padx=2)
+        
+        # Separator
+        ttk.Separator(nav_bar, orient=tk.VERTICAL).pack(side=tk.LEFT, fill=tk.Y, padx=5)
+        
+        # Navigation buttons
+        ttk.Button(nav_bar, text="⏮ First", command=self.go_to_first, width=10).pack(side=tk.LEFT, padx=2)
+        ttk.Button(nav_bar, text="◀◀ Prev", command=self.prev_frame, width=10).pack(side=tk.LEFT, padx=2)
+        ttk.Button(nav_bar, text="▶▶ Next", command=self.next_frame, width=10).pack(side=tk.LEFT, padx=2)
+        ttk.Button(nav_bar, text="⏭ Last", command=self.go_to_last, width=10).pack(side=tk.LEFT, padx=2)
+        
+        # Separator
+        ttk.Separator(nav_bar, orient=tk.VERTICAL).pack(side=tk.LEFT, fill=tk.Y, padx=5)
+        
+        # Smart navigation buttons
+        ttk.Button(nav_bar, text="⏭ Next Untagged", command=self.jump_to_next_untagged,
+                  width=15).pack(side=tk.LEFT, padx=2)
+        ttk.Button(nav_bar, text="⏮ Prev Untagged", command=self.jump_to_prev_untagged,
+                  width=15).pack(side=tk.LEFT, padx=2)
+        
+        # Separator
+        ttk.Separator(nav_bar, orient=tk.VERTICAL).pack(side=tk.LEFT, fill=tk.Y, padx=5)
+        
+        # Frame number display and goto
+        frame_info_frame = ttk.Frame(nav_bar)
+        frame_info_frame.pack(side=tk.LEFT, padx=5)
+        
+        ttk.Label(frame_info_frame, text="Frame:").pack(side=tk.LEFT, padx=2)
+        self.frame_number_label = ttk.Label(frame_info_frame, text="0 / 0", width=12)
+        self.frame_number_label.pack(side=tk.LEFT, padx=2)
+        
+        ttk.Label(frame_info_frame, text="Goto:").pack(side=tk.LEFT, padx=(10, 2))
+        self.goto_frame_var = tk.StringVar()
+        goto_entry = ttk.Entry(frame_info_frame, textvariable=self.goto_frame_var, width=8)
+        goto_entry.pack(side=tk.LEFT, padx=2)
+        goto_entry.bind('<Return>', lambda e: self.goto_frame())
+        ttk.Button(frame_info_frame, text="Go", command=self.goto_frame, width=5).pack(side=tk.LEFT, padx=2)
+        
         # Main content area
         content_frame = ttk.Frame(main_frame)
         content_frame.pack(fill=tk.BOTH, expand=True, pady=5)
@@ -1203,40 +1247,13 @@ class SetupWizard:
         # Bind to root window for mousewheel
         self.root.bind_all("<MouseWheel>", on_mousewheel)
         
-        # Frame navigation
-        nav_frame = ttk.LabelFrame(controls_panel, text="Navigation", padding="10")
-        nav_frame.pack(fill=tk.X, pady=5)
-        
-        # Play/Pause button - on its own row for prominence
-        play_row = ttk.Frame(nav_frame)
-        play_row.pack(fill=tk.X, pady=(0, 5))
-        self.play_button = ttk.Button(play_row, text="▶ Play", command=self.toggle_playback, width=12)
-        self.play_button.pack(side=tk.LEFT, padx=2)
-        
-        # Navigation buttons row
-        nav_buttons_frame = ttk.Frame(nav_frame)
-        nav_buttons_frame.pack(fill=tk.X)
-        
-        ttk.Button(nav_buttons_frame, text="⏮ First", command=self.go_to_first, width=10).pack(side=tk.LEFT, padx=2)
-        ttk.Button(nav_buttons_frame, text="◀◀ Prev", command=self.prev_frame, width=10).pack(side=tk.LEFT, padx=2)
-        ttk.Button(nav_buttons_frame, text="▶▶ Next", command=self.next_frame, width=10).pack(side=tk.LEFT, padx=2)
-        ttk.Button(nav_buttons_frame, text="⏭ Last", command=self.go_to_last, width=10).pack(side=tk.LEFT, padx=2)
-        
-        # Smart navigation buttons
-        smart_nav_frame = ttk.Frame(nav_frame)
-        smart_nav_frame.pack(fill=tk.X, pady=(5, 0))
-        
-        ttk.Button(smart_nav_frame, text="⏭ Next Untagged", command=self.jump_to_next_untagged,
-                  width=18).pack(side=tk.LEFT, padx=2)
-        ttk.Button(smart_nav_frame, text="⏮ Prev Untagged", command=self.jump_to_prev_untagged,
-                  width=18).pack(side=tk.LEFT, padx=2)
-        
-        # Frame info
-        self.frame_label = ttk.Label(nav_frame, text="Frame: 0 / 0")
-        self.frame_label.pack(pady=5)
+        # Navigation controls have been moved to horizontal bar above video frame
+        # Keep track ID search in controls panel for reference
+        track_search_frame = ttk.LabelFrame(controls_panel, text="Track Search", padding="10")
+        track_search_frame.pack(fill=tk.X, pady=5)
         
         # Go to Track ID search
-        goto_track_frame = ttk.Frame(nav_frame)
+        goto_track_frame = ttk.Frame(track_search_frame)
         goto_track_frame.pack(fill=tk.X, pady=5)
         
         ttk.Label(goto_track_frame, text="Go to Track ID:").pack(side=tk.LEFT, padx=5)
@@ -1245,16 +1262,6 @@ class SetupWizard:
         ttk.Button(goto_track_frame, text="🔍 Find", command=self.goto_track_id, width=10).pack(side=tk.LEFT, padx=2)
         ttk.Button(goto_track_frame, text="📋 List IDs", command=self.show_track_id_list, width=12).pack(side=tk.LEFT, padx=2)
         self.goto_track_entry.bind("<Return>", lambda e: self.goto_track_id())
-        
-        # Go to Frame search
-        goto_frame_frame = ttk.Frame(nav_frame)
-        goto_frame_frame.pack(fill=tk.X, pady=5)
-        
-        ttk.Label(goto_frame_frame, text="Go to Frame:").pack(side=tk.LEFT, padx=5)
-        self.goto_frame_entry = ttk.Entry(goto_frame_frame, width=10)
-        self.goto_frame_entry.pack(side=tk.LEFT, padx=2)
-        ttk.Button(goto_frame_frame, text="🔍 Go", command=self.goto_frame, width=10).pack(side=tk.LEFT, padx=2)
-        self.goto_frame_entry.bind("<Return>", lambda e: self.goto_frame())
         
         # Zoom controls
         zoom_controls_frame = ttk.Frame(nav_frame)
@@ -2066,7 +2073,8 @@ Home/End: First/Last frame"""
                 messagebox.showwarning("No Video", "Please load a video first")
                 return
             
-            frame_str = self.goto_frame_entry.get().strip()
+            # Use goto_frame_var from navigation bar
+            frame_str = self.goto_frame_var.get().strip() if hasattr(self, 'goto_frame_var') else ""
             if not frame_str:
                 messagebox.showwarning("No Frame Number", "Please enter a frame number")
                 return
@@ -2803,7 +2811,9 @@ Home/End: First/Last frame"""
         
         # Update frame label
         max_frame = max(0, self.total_frames - 1) if self.total_frames > 0 else 0
-        self.frame_label.config(text=f"Frame: {self.current_frame_num} / {max_frame}")
+        # Update frame number label in navigation bar
+        if hasattr(self, 'frame_number_label'):
+            self.frame_number_label.config(text=f"{self.current_frame_num} / {max_frame}")
         self.frame_var.set(self.current_frame_num)
         
         # Update ball count for current frame
