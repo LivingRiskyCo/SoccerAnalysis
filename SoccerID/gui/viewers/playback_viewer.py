@@ -4735,27 +4735,54 @@ class PlaybackViewer:
                                     cv2.addWeighted(overlay, 0.6, display_frame, 0.4, 0, display_frame)
                                 
                                 # Draw analytics text with better thickness and contrast
+                                # Ensure analytics_color is valid
+                                if not isinstance(analytics_color, tuple) or len(analytics_color) != 3:
+                                    analytics_color = (255, 255, 255)  # White fallback
+                                analytics_color = tuple(max(0, min(255, int(c))) for c in analytics_color)
+                                
+                                # Use cv2.putText for better reliability (crisp renderer may have issues)
                                 for i, line in enumerate(analytics_lines[:5]):  # Limit to 5 lines to avoid clutter
                                     text_y = analytics_y + i * line_height
-                                    self.csv_hd_renderer.draw_crisp_text(
-                                        display_frame,
-                                        line,
-                                        (x + 44, text_y),
-                                        font_face,
-                                        font_scale,
-                                        analytics_color,
-                                        thickness,
-                                        outline_color=(0, 0, 0),
-                                        outline_thickness=max(1, thickness // 2)  # Thicker outline for better contrast
+                                    text_x = x + 44
+                                    
+                                    # Draw black outline first for visibility
+                                    outline_thickness = max(2, thickness + 1)
+                                    for dx, dy in [(-1,-1), (-1,0), (-1,1), (0,-1), (0,1), (1,-1), (1,0), (1,1)]:
+                                        cv2.putText(
+                                            display_frame, line, (text_x + dx, text_y + dy),
+                                            font_face, font_scale,
+                                            (0, 0, 0), outline_thickness,  # Black outline
+                                            cv2.LINE_AA
+                                        )
+                                    # Draw main text
+                                    cv2.putText(
+                                        display_frame, line, (text_x, text_y),
+                                        font_face, font_scale,
+                                        analytics_color, thickness,
+                                        cv2.LINE_AA
                                     )
         
         # Draw analytics in panel/banner/bar position if enabled and not "with_player"
-        if self.show_analytics.get() and frame_num in self.analytics_data:
+        if self.show_analytics.get():
             analytics_pos = self.analytics_position.get() if hasattr(self, 'analytics_position') else "with_player"
             if frame_num == 0:
                 print(f"[DEBUG] Analytics check: show_analytics={self.show_analytics.get()}, frame in data={frame_num in self.analytics_data}, position='{analytics_pos}'")
+                print(f"[DEBUG] Analytics preferences: {self.analytics_preferences}")
             if analytics_pos != "with_player":
-                self._render_analytics_panel(display_frame, frame_num, analytics_pos)
+                # Try to find nearest frame with analytics if current frame is missing
+                if frame_num not in self.analytics_data:
+                    # Find nearest frame with analytics (within ±5 frames)
+                    nearest_frame = None
+                    min_distance = float('inf')
+                    for existing_frame in self.analytics_data.keys():
+                        distance = abs(existing_frame - frame_num)
+                        if distance < min_distance and distance <= 5:
+                            min_distance = distance
+                            nearest_frame = existing_frame
+                    if nearest_frame is not None:
+                        frame_num = nearest_frame
+                if frame_num in self.analytics_data:
+                    self._render_analytics_panel(display_frame, frame_num, analytics_pos)
             elif frame_num == 0:
                 print(f"[DEBUG] Analytics position is 'with_player', skipping panel render")
         
@@ -5732,12 +5759,35 @@ class PlaybackViewer:
         else:
             # VERTICAL LAYOUT: For non-banner positions (panels/bars), keep vertical stacking
             for player_name, analytics_lines, player_color, player_id in all_analytics[:max_players]:
+                # Skip if no analytics lines
+                if not analytics_lines or len(analytics_lines) == 0:
+                    if original_frame_num <= 1:
+                        print(f"[WARNING] No analytics lines for player {player_name} (ID: {player_id})")
+                    continue
+                
                 # Player name header in player's track color
-                self.csv_hd_renderer.draw_crisp_text(
-                    display_frame, f"--- {player_name} ---", (text_x, text_y),
+                # Ensure player_color is valid
+                if not isinstance(player_color, tuple) or len(player_color) != 3:
+                    player_color = (255, 255, 255)  # White fallback
+                player_color = tuple(max(0, min(255, int(c))) for c in player_color)
+                
+                # Use cv2.putText for better reliability
+                name_text = f"--- {player_name} ---"
+                name_outline_thickness = max(2, thickness + 1)
+                # Draw black outline first
+                for dx, dy in [(-1,-1), (-1,0), (-1,1), (0,-1), (0,1), (1,-1), (1,0), (1,1)]:
+                    cv2.putText(
+                        display_frame, name_text, (text_x + dx, text_y + dy),
+                        font_face, font_scale,
+                        (0, 0, 0), name_outline_thickness,  # Black outline
+                        cv2.LINE_AA
+                    )
+                # Draw main text
+                cv2.putText(
+                    display_frame, name_text, (text_x, text_y),
                     font_face, font_scale,
-                    player_color, max(thickness + 1, 3),  # Use player's track color
-                    outline_color=(0, 0, 0), outline_thickness=max(1, thickness // 2)
+                    player_color, max(thickness + 1, 3),
+                    cv2.LINE_AA
                 )
                 text_y += int(line_height * 0.9)  # Tighter spacing after player name
                 
@@ -5746,11 +5796,28 @@ class PlaybackViewer:
                 for line in analytics_lines[:max_lines]:
                     if text_y + line_height > pos[1] + panel_size[1] - 10:
                         break  # Don't draw beyond panel bounds
-                    self.csv_hd_renderer.draw_crisp_text(
+                    
+                    # Ensure analytics_color is valid
+                    if not isinstance(analytics_color, tuple) or len(analytics_color) != 3:
+                        analytics_color = (255, 255, 255)  # White fallback
+                    analytics_color = tuple(max(0, min(255, int(c))) for c in analytics_color)
+                    
+                    # Use cv2.putText for better reliability
+                    line_outline_thickness = max(2, thickness)
+                    # Draw black outline first
+                    for dx, dy in [(-1,-1), (-1,0), (-1,1), (0,-1), (0,1), (1,-1), (1,0), (1,1)]:
+                        cv2.putText(
+                            display_frame, line, (text_x + 10 + dx, text_y + dy),
+                            font_face, font_scale * 0.9,
+                            (0, 0, 0), line_outline_thickness,  # Black outline
+                            cv2.LINE_AA
+                        )
+                    # Draw main text
+                    cv2.putText(
                         display_frame, line, (text_x + 10, text_y),
                         font_face, font_scale * 0.9,
                         analytics_color, thickness,
-                        outline_color=(0, 0, 0), outline_thickness=max(1, thickness // 2)
+                        cv2.LINE_AA
                     )
                     text_y += int(line_height * 0.7)  # Tighter line spacing (70% of line height)
                 
