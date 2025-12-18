@@ -1165,12 +1165,19 @@ class SetupWizard:
         file_frame = ttk.LabelFrame(main_frame, text="Setup", padding="10")
         file_frame.pack(fill=tk.X, pady=5)
         
+        # File loading section
+        file_loading_frame = ttk.Frame(file_frame)
+        file_loading_frame.pack(fill=tk.X, pady=2)
+        
+        ttk.Button(file_loading_frame, text="📹 Load Video", command=self.load_video, width=15).pack(side=tk.LEFT, padx=5)
+        ttk.Button(file_loading_frame, text="📊 Load CSV", command=self.load_csv_file, width=15).pack(side=tk.LEFT, padx=5)
+        ttk.Button(file_loading_frame, text="Load Backup", command=self.load_backup, width=15).pack(side=tk.LEFT, padx=5)
+        
+        ttk.Separator(file_frame, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=5)
+        
         # First row of buttons
         button_row1 = ttk.Frame(file_frame)
         button_row1.pack(fill=tk.X, pady=2)
-        
-        ttk.Button(button_row1, text="Load Video", command=self.load_video, width=15).pack(side=tk.LEFT, padx=5)
-        ttk.Button(button_row1, text="Load Backup", command=self.load_backup, width=15).pack(side=tk.LEFT, padx=5)
         ttk.Button(button_row1, text="🔄 Refresh Players", command=self.refresh_player_name_list, 
                   width=18).pack(side=tk.LEFT, padx=5)
         ttk.Button(button_row1, text="🎨 Team Colors", command=self.open_team_color_detector, 
