@@ -2228,6 +2228,12 @@ Playback Viewer:
             
             wizard_window.after(500, cleanup_topmost)
             
+            # Restore main window when wizard is closed
+            def on_wizard_close():
+                self.root.deiconify()  # Restore main window when wizard closes
+            
+            wizard_window.protocol("WM_DELETE_WINDOW", lambda: (on_wizard_close(), wizard_window.destroy()))
+            
         except ImportError as e:
             messagebox.showerror("Error", 
                                f"Could not import setup_wizard: {str(e)}\n\n"
