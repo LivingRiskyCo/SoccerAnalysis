@@ -91,6 +91,8 @@ class SetupWizard:
         
         # Video and model
         self.video_path = video_path  # Allow video path to be passed in
+        self.csv_path = csv_path  # Allow CSV path to be passed in for loading tracking data
+        self.csv_data = None  # Store loaded CSV data
         self.cap = None
         self.model = None
         self.tracker = None
