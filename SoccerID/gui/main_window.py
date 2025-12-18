@@ -2142,6 +2142,15 @@ Playback Viewer:
             wizard_window.geometry("1600x1050")
             wizard_window.transient(self.root)
             
+            # Ensure window has minimize and maximize buttons
+            wizard_window.overrideredirect(False)  # Standard window controls
+            wizard_window.resizable(True, True)  # Allow resizing (enables maximize)
+            try:
+                if hasattr(wizard_window, 'attributes'):
+                    wizard_window.attributes('-toolwindow', False)  # Not a toolwindow (shows in taskbar)
+            except:
+                pass
+            
             # Force window to be shown and visible - use aggressive Windows-specific approach
             wizard_window.withdraw()  # Hide first to ensure clean state
             wizard_window.update()

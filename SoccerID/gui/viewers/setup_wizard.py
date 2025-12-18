@@ -63,6 +63,21 @@ class SetupWizard:
         except:
             pass  # If already False, that's fine
         
+        # Explicitly ensure window can be minimized and maximized
+        # On Windows, we may need to set window attributes after the window is shown
+        try:
+            # Ensure the window is resizable (allows maximize)
+            self.root.resizable(True, True)
+            # Set window attributes to ensure standard controls are visible
+            # This is especially important on Windows
+            if hasattr(self.root, 'attributes'):
+                # Ensure the window is not toolwindow (toolwindows don't show in taskbar)
+                self.root.attributes('-toolwindow', False)
+                # Ensure the window is not topmost (which can interfere with controls)
+                # We'll set topmost later if needed, but not during initialization
+        except:
+            pass
+        
         # Ensure window is visible and on top - use aggressive Windows-specific approach
         self.root.withdraw()  # Hide first to ensure clean state
         self.root.update()
@@ -83,6 +98,18 @@ class SetupWizard:
         
         self.root.deiconify()  # Show window
         self.root.state('normal')  # Ensure normal state (not minimized/maximized)
+        
+        # Ensure window controls are visible after showing
+        try:
+            # Force window to have standard controls (minimize, maximize, close)
+            self.root.overrideredirect(False)
+            self.root.resizable(True, True)
+            # On Windows, ensure the window style includes minimize/maximize buttons
+            if hasattr(self.root, 'attributes'):
+                self.root.attributes('-toolwindow', False)
+        except:
+            pass
+        
         self.root.lift()  # Bring to front
         self.root.focus_set()  # Set focus
         self.root.focus_force()  # Force focus (works on Windows)
