@@ -21,10 +21,18 @@ except ImportError:
 
 class FieldCalibrationGUI:
     def __init__(self, parent=None, video_path=None):
-        self.root = tk.Toplevel(parent) if parent else tk.Tk()
-        self.root.title("Field Calibration Tool")
-        self.root.geometry("1800x1000")  # Increased size for better visibility
-        self.root.resizable(True, True)
+        # Use parent window if provided, otherwise create new root
+        if parent:
+            self.root = parent
+            # Update parent window properties instead of creating new one
+            self.root.title("Field Calibration Tool")
+            self.root.geometry("1800x1000")  # Increased size for better visibility
+            self.root.resizable(True, True)
+        else:
+            self.root = tk.Tk()
+            self.root.title("Field Calibration Tool")
+            self.root.geometry("1800x1000")  # Increased size for better visibility
+            self.root.resizable(True, True)
         
         # Ensure window opens on top
         self.root.lift()
