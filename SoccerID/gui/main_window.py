@@ -2129,6 +2129,11 @@ Playback Viewer:
                     except ImportError:
                         from setup_wizard import SetupWizard
             
+            # Temporarily remove topmost from main window to allow wizard to appear
+            main_was_topmost = self.root.attributes('-topmost')
+            if main_was_topmost:
+                self.root.attributes('-topmost', False)
+            
             wizard_window = tk.Toplevel(self.root)
             wizard_window.title("Setup Wizard")
             wizard_window.geometry("1600x1050")
@@ -2136,13 +2141,10 @@ Playback Viewer:
             
             # Ensure window is visible and on top
             wizard_window.deiconify()  # Make sure window is not minimized
-            wizard_window.lift()  # Bring to front
+            wizard_window.lift(self.root)  # Bring to front, above parent
             wizard_window.attributes('-topmost', True)  # Force to top
             wizard_window.focus_force()  # Force focus
             wizard_window.update()  # Update window state immediately
-            
-            # Remove topmost after a short delay
-            wizard_window.after(200, lambda: wizard_window.attributes('-topmost', False))
             
             # Get video path if available
             video_path = None
@@ -2156,8 +2158,16 @@ Playback Viewer:
             
             # Ensure window is still visible after SetupWizard initialization
             wizard_window.deiconify()
-            wizard_window.lift()
+            wizard_window.lift(self.root)  # Bring above parent again
             wizard_window.update()
+            
+            # Remove topmost after a short delay, and restore main window topmost if it was set
+            def cleanup_topmost():
+                wizard_window.attributes('-topmost', False)
+                if main_was_topmost:
+                    self.root.attributes('-topmost', True)
+            
+            wizard_window.after(500, cleanup_topmost)
             
         except ImportError as e:
             messagebox.showerror("Error", 
