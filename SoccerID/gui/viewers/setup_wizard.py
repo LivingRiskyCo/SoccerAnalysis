@@ -7048,7 +7048,7 @@ Home/End: First/Last frame"""
         # Also try to load from most recent backup if seed files don't have data
         if len(self.ball_positions) == 0:
             backup_dir = "setup_wizard_backups"
-            if os.path.exists(backup_dir):
+            if os.path.exists(backup_dir) and os.path.isdir(backup_dir):
                 try:
                     # Find most recent backup file
                     backup_files = [f for f in os.listdir(backup_dir) if f.endswith('.json')]
@@ -7058,7 +7058,7 @@ Home/End: First/Last frame"""
                         most_recent_backup = os.path.join(backup_dir, backup_files[0])
                         
                         # Validate backup file exists before trying to open it
-                        if os.path.exists(most_recent_backup):
+                        if os.path.exists(most_recent_backup) and os.path.isfile(most_recent_backup):
                             with open(most_recent_backup, 'r') as f:
                                 config = json.load(f)
                             
