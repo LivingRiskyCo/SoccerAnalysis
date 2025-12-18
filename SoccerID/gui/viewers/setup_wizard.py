@@ -104,9 +104,16 @@ except ImportError:
 # Try to import BoxMOT trackers (OcSort, BotSort, etc.)
 try:
     from boxmot import OcSort, BotSort, DeepOcSort, StrongSort
-    from boxmot_tracker_wrapper import BoxMOTTrackerWrapper, create_tracker
     BOXMOT_AVAILABLE = True
     print("✓ BoxMOT trackers available")
+except ImportError:
+    BOXMOT_AVAILABLE = False
+
+# Try to import BoxMOT wrapper (may be in parent directory)
+try:
+    from boxmot_tracker_wrapper import BoxMOTTrackerWrapper, create_tracker, create_boxmot_tracker
+    BOXMOT_AVAILABLE = True
+    print("✓ BoxMOT wrapper available")
 except ImportError:
     try:
         # Try importing from parent directory
@@ -117,11 +124,13 @@ except ImportError:
             boxmot_module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(boxmot_module)
             BoxMOTTrackerWrapper = boxmot_module.BoxMOTTrackerWrapper
-            create_tracker = boxmot_module.create_tracker
+            # Try both function names for compatibility
+            create_tracker = getattr(boxmot_module, 'create_tracker', None) or getattr(boxmot_module, 'create_boxmot_tracker', None)
+            create_boxmot_tracker = getattr(boxmot_module, 'create_boxmot_tracker', create_tracker)
             BOXMOT_AVAILABLE = True
             print("✓ Loaded BoxMOT wrapper from parent directory")
     except Exception as e:
-        print(f"Warning: BoxMOT not available: {e}")
+        print(f"Warning: BoxMOT wrapper not available: {e}")
         BOXMOT_AVAILABLE = False
 
 if not OCSORT_AVAILABLE and not BOXMOT_AVAILABLE:
