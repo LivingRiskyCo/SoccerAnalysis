@@ -2515,14 +2515,17 @@ Home/End: First/Last frame"""
             messagebox.showerror("Error", "Video has no frames. Please load a valid video file.")
             return
         
+        # Declare global at the start of the function before using it
+        global YOLO_AVAILABLE, SUPERVISION_AVAILABLE
+        
         if not YOLO_AVAILABLE:
             # Try to import again with more detailed error message
             try:
                 from ultralytics import YOLO
                 import supervision as sv
                 # If we get here, YOLO is actually available - update the flag
-                global YOLO_AVAILABLE
                 YOLO_AVAILABLE = True
+                SUPERVISION_AVAILABLE = True
                 print("✓ YOLO and supervision successfully imported")
             except ImportError as e:
                 error_msg = f"YOLO not available. Please install ultralytics.\n\nError: {e}\n\nTry: pip install ultralytics supervision"
