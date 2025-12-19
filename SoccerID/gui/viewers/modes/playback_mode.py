@@ -173,6 +173,12 @@ class PlaybackMode(BaseMode):
         self.heatmap_player_id = tk.StringVar(value="all")  # "all" or specific player ID
         self.heatmap_time_range = tk.IntVar(value=300)  # frames to include in heatmap
         
+        # Overlay visibility toggles (needed in create_ui)
+        self.show_players_var = tk.BooleanVar(value=True)
+        self.show_ball_var = tk.BooleanVar(value=True)
+        self.show_labels_var = tk.BooleanVar(value=True)
+        self.show_trajectories_var = tk.BooleanVar(value=False)
+        
         # Now call super (which will call create_ui)
         super().__init__(parent_frame, viewer, video_manager, detection_manager,
                         reid_manager, gallery_manager, csv_manager, anchor_manager)
@@ -379,32 +385,26 @@ class PlaybackMode(BaseMode):
         overlay_frame = ttk.LabelFrame(parent, text="Overlays", padding=5)
         overlay_frame.pack(fill=tk.X, pady=5)
         
-        self.show_players_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(overlay_frame, text="Show Players", 
                        variable=self.show_players_var,
                        command=self.update_display).pack(anchor=tk.W)
         
-        self.show_ball_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(overlay_frame, text="Show Ball", 
                        variable=self.show_ball_var,
                        command=self.update_display).pack(anchor=tk.W)
         
-        self.show_ball_trail = tk.BooleanVar(value=True)
         ttk.Checkbutton(overlay_frame, text="Show Ball Trail", 
                        variable=self.show_ball_trail,
                        command=self.update_display).pack(anchor=tk.W)
         
-        self.show_labels_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(overlay_frame, text="Show Labels", 
                        variable=self.show_labels_var,
                        command=self.update_display).pack(anchor=tk.W)
         
-        self.show_trajectories_var = tk.BooleanVar(value=False)
         ttk.Checkbutton(overlay_frame, text="Show Trajectories", 
                        variable=self.show_trajectories_var,
                        command=self.update_display).pack(anchor=tk.W)
         
-        self.show_field_zones = tk.BooleanVar(value=False)
         ttk.Checkbutton(overlay_frame, text="Show Field Zones", 
                        variable=self.show_field_zones,
                        command=self.update_display).pack(anchor=tk.W)
