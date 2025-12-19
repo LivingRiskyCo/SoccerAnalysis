@@ -977,11 +977,13 @@ class SetupMode(BaseMode):
                     pass
             
             # Match to gallery
-            match_result = self.gallery_manager.match_player(
-                features=features,
-                foot_features=foot_features if 'foot_features' in locals() and foot_features is not None else None,
-                jersey_number=detected_jersey
-            )
+            match_kwargs = {
+                'features': features,
+                'jersey_number': detected_jersey
+            }
+            if foot_features is not None:
+                match_kwargs['foot_features'] = foot_features
+            match_result = self.gallery_manager.match_player(**match_kwargs)
             
             if match_result:
                 player_name, confidence, _ = match_result
