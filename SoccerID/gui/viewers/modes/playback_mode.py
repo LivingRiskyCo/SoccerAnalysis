@@ -141,6 +141,30 @@ class PlaybackMode(BaseMode):
         self.is_maximized = False
         self.is_fullscreen = False
         
+        # Player trails (needed in create_ui)
+        self.show_player_trail = tk.BooleanVar(value=False)
+        self.player_trail_length = tk.IntVar(value=30)
+        self.player_trail_size = tk.IntVar(value=3)
+        self.player_trail_fade = tk.BooleanVar(value=True)
+        self.player_trails = {}  # player_id -> deque of positions
+        
+        # Lost track predictions (needed in create_ui)
+        self.show_predicted_boxes = tk.BooleanVar(value=False)
+        self.prediction_duration = tk.DoubleVar(value=1.5)
+        self.prediction_size = tk.IntVar(value=5)
+        self.prediction_style = tk.StringVar(value="dot")
+        
+        # Field zones (needed in create_ui)
+        self.show_field_zones = tk.BooleanVar(value=False)
+        
+        # Ball trail (needed in create_ui)
+        self.show_ball_trail = tk.BooleanVar(value=True)
+        self.ball_trail = []  # List of recent ball positions
+        
+        # Overlay metadata (needed in create_ui)
+        self.use_overlay_metadata = tk.BooleanVar(value=False)
+        self.overlay_render_mode = tk.StringVar(value="csv")
+        
         # Now call super (which will call create_ui)
         super().__init__(parent_frame, viewer, video_manager, detection_manager,
                         reid_manager, gallery_manager, csv_manager, anchor_manager)
@@ -165,24 +189,6 @@ class PlaybackMode(BaseMode):
         # Overlay metadata
         self.overlay_metadata = None
         self.overlay_renderer = None
-        self.use_overlay_metadata = tk.BooleanVar(value=False)
-        self.overlay_render_mode = tk.StringVar(value="csv")
-        
-        # Player trails
-        self.show_player_trail = tk.BooleanVar(value=False)
-        self.player_trail_length = tk.IntVar(value=30)
-        self.player_trail_size = tk.IntVar(value=3)
-        self.player_trail_fade = tk.BooleanVar(value=True)
-        self.player_trails = {}  # player_id -> deque of positions
-        
-        # Lost track predictions
-        self.show_predicted_boxes = tk.BooleanVar(value=False)
-        self.prediction_duration = tk.DoubleVar(value=1.5)
-        self.prediction_size = tk.IntVar(value=5)
-        self.prediction_style = tk.StringVar(value="dot")
-        
-        # Field zones
-        self.show_field_zones = tk.BooleanVar(value=False)
         
         # Zoom/Pan
         self.zoom_level = 1.0
@@ -191,10 +197,6 @@ class PlaybackMode(BaseMode):
         self.is_panning = False
         self.pan_start_x = 0
         self.pan_start_y = 0
-        
-        # Ball trail
-        self.show_ball_trail = tk.BooleanVar(value=True)
-        self.ball_trail = []  # List of recent ball positions
         
         # Comparison mode
         self.comparison_mode = False
