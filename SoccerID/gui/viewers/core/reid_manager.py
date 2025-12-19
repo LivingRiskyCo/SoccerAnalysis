@@ -59,46 +59,95 @@ class ReIDManager:
             return
         
         try:
-            if detections is None or len(detections) == 0:
+            if detections is None:
                 return
             
-            # Extract features for each detection
-            features_dict = {}
-            foot_features_dict = {}
-            
-            for i, (xyxy, track_id) in enumerate(zip(detections.xyxy, detections.tracker_id)):
-                if track_id is None:
-                    continue
+            # Handle supervision Detections object
+            if hasattr(detections, 'xyxy') and hasattr(detections, 'tracker_id'):
+                # Supervision Detections object
+                if len(detections) == 0:
+                    return
                 
-                # Extract bounding box
-                x1, y1, x2, y2 = map(int, xyxy)
-                bbox = [x1, y1, x2, y2]
-                
-                # Extract Re-ID features (upper body)
+                # Extract features using reid_tracker's method
                 try:
-                    features = self.reid_tracker.extract_features(frame, bbox)
-                    if features is not None:
-                        features_dict[track_id] = features
-                except:
-                    pass
-                
-                # Extract foot features (if available)
-                try:
+                    features = self.reid_tracker.extract_features(frame, detections, None, None)
+                    
+                    # Extract foot features if available
+                    foot_features = None
                     if hasattr(self.reid_tracker, 'extract_foot_features'):
-                        foot_features = self.reid_tracker.extract_foot_features(frame, bbox)
-                        if foot_features is not None:
-                            foot_features_dict[track_id] = foot_features
-                except:
-                    pass
-            
-            # Store features
-            if features_dict:
-                self.frame_reid_features[frame_num] = features_dict
-            if foot_features_dict:
-                self.frame_foot_features[frame_num] = foot_features_dict
+                        try:
+                            foot_features = self.reid_tracker.extract_foot_features(frame, detections)
+                        except:
+                            pass
+                    
+                    # Store features indexed by track_id
+                    if frame_num not in self.frame_reid_features:
+                        self.frame_reid_features[frame_num] = {}
+                    if frame_num not in self.frame_foot_features:
+                        self.frame_foot_features[frame_num] = {}
+                    
+                    if features is not None and len(features) > 0:
+                        for i, track_id in enumerate(detections.tracker_id):
+                            if track_id is not None and i < len(features):
+                                feature_vector = features[i]
+                                # Flatten if needed
+                                if isinstance(feature_vector, np.ndarray) and len(feature_vector.shape) > 1:
+                                    feature_vector = feature_vector.flatten()
+                                self.frame_reid_features[frame_num][track_id] = feature_vector
+                    
+                    if foot_features is not None and len(foot_features) > 0:
+                        for i, track_id in enumerate(detections.tracker_id):
+                            if track_id is not None and i < len(foot_features):
+                                foot_feature_vector = foot_features[i]
+                                if isinstance(foot_feature_vector, np.ndarray) and len(foot_feature_vector.shape) > 1:
+                                    foot_feature_vector = foot_feature_vector.flatten()
+                                self.frame_foot_features[frame_num][track_id] = foot_feature_vector
+                except Exception as e:
+                    print(f"Error extracting features with reid_tracker: {e}")
+            else:
+                # Handle bbox list format (legacy)
+                if len(detections) == 0:
+                    return
+                
+                features_dict = {}
+                foot_features_dict = {}
+                
+                for i, bbox in enumerate(detections):
+                    if isinstance(bbox, (list, tuple)) and len(bbox) >= 4:
+                        x1, y1, x2, y2 = map(int, bbox[:4])
+                        track_id = i  # Use index as track_id
+                        
+                        # Extract Re-ID features (upper body)
+                        try:
+                            features = self.reid_tracker.extract_features(frame, [bbox])
+                            if features is not None and len(features) > 0:
+                                features_dict[track_id] = features[0]
+                        except:
+                            pass
+                        
+                        # Extract foot features (if available)
+                        try:
+                            if hasattr(self.reid_tracker, 'extract_foot_features'):
+                                foot_features = self.reid_tracker.extract_foot_features(frame, [bbox])
+                                if foot_features is not None and len(foot_features) > 0:
+                                    foot_features_dict[track_id] = foot_features[0]
+                        except:
+                            pass
+                
+                # Store features
+                if features_dict:
+                    if frame_num not in self.frame_reid_features:
+                        self.frame_reid_features[frame_num] = {}
+                    self.frame_reid_features[frame_num].update(features_dict)
+                if foot_features_dict:
+                    if frame_num not in self.frame_foot_features:
+                        self.frame_foot_features[frame_num] = {}
+                    self.frame_foot_features[frame_num].update(foot_features_dict)
                 
         except Exception as e:
             print(f"Error extracting Re-ID features: {e}")
+            import traceback
+            traceback.print_exc()
     
     def get_features(self, frame_num: int, track_id: int) -> Optional[np.ndarray]:
         """Get Re-ID features for a track at a frame"""
