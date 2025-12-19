@@ -121,51 +121,186 @@ class PlaybackMode(BaseMode):
         # Player column mapping for consistent banner layout
         self._player_column_map = {}
         self._column_player_map = {}
+        
+        # File watching for CSV auto-reload
+        self.csv_last_modified = None
+        self.watch_csv_enabled = tk.BooleanVar(value=True)
+        self.watch_thread = None
+        self.watch_running = False
+        
+        # Overlay metadata
+        self.overlay_metadata = None
+        self.overlay_renderer = None
+        self.use_overlay_metadata = tk.BooleanVar(value=False)
+        self.overlay_render_mode = tk.StringVar(value="csv")
+        
+        # Player trails
+        self.show_player_trail = tk.BooleanVar(value=False)
+        self.player_trail_length = tk.IntVar(value=30)
+        self.player_trail_size = tk.IntVar(value=3)
+        self.player_trail_fade = tk.BooleanVar(value=True)
+        self.player_trails = {}  # player_id -> deque of positions
+        
+        # Lost track predictions
+        self.show_predicted_boxes = tk.BooleanVar(value=False)
+        self.prediction_duration = tk.DoubleVar(value=1.5)
+        self.prediction_size = tk.IntVar(value=5)
+        self.prediction_style = tk.StringVar(value="dot")
+        
+        # Field zones
+        self.show_field_zones = tk.BooleanVar(value=False)
+        
+        # Zoom/Pan
+        self.zoom_level = 1.0
+        self.pan_x = 0
+        self.pan_y = 0
+        self.is_panning = False
+        self.pan_start_x = 0
+        self.pan_start_y = 0
+        
+        # Window controls
+        self.always_on_top = tk.BooleanVar(value=False)
+        self.is_maximized = False
+        self.is_fullscreen = False
+        
+        # Ball trail
+        self.show_ball_trail = tk.BooleanVar(value=True)
+        self.ball_trail = []  # List of recent ball positions
+        
+        # Comparison mode (for future)
+        self.comparison_mode = False
     
     def create_ui(self):
-        """Create playback mode UI"""
+        """Create playback mode UI with tabbed interface"""
         # Main layout: video on left, controls on right
         main_frame = ttk.Frame(self.parent_frame)
         main_frame.pack(fill=tk.BOTH, expand=True)
         
+        # Top: File selection and window controls
+        file_frame = ttk.LabelFrame(main_frame, text="File & Window Controls", padding="5")
+        file_frame.pack(fill=tk.X, pady=5)
+        
+        # File operations
+        file_buttons_frame = ttk.Frame(file_frame)
+        file_buttons_frame.pack(side=tk.LEFT, padx=5)
+        
+        ttk.Button(file_buttons_frame, text="Load Video", command=self.load_video, width=12).pack(side=tk.LEFT, padx=2)
+        ttk.Button(file_buttons_frame, text="Load CSV", command=self.load_csv, width=12).pack(side=tk.LEFT, padx=2)
+        ttk.Button(file_buttons_frame, text="Load Metadata", command=self.load_metadata_manual, width=12).pack(side=tk.LEFT, padx=2)
+        ttk.Button(file_buttons_frame, text="Reload CSV", command=self.reload_csv, width=12).pack(side=tk.LEFT, padx=2)
+        ttk.Button(file_buttons_frame, text="Export Video", command=self.export_video, width=12).pack(side=tk.LEFT, padx=2)
+        
+        # Auto-reload checkbox
+        ttk.Checkbutton(file_buttons_frame, text="Auto-reload CSV", variable=self.watch_csv_enabled).pack(side=tk.LEFT, padx=5)
+        
+        # Window controls
+        window_controls_frame = ttk.Frame(file_frame)
+        window_controls_frame.pack(side=tk.RIGHT, padx=5)
+        
+        ttk.Checkbutton(window_controls_frame, text="Always on Top", variable=self.always_on_top,
+                       command=self.toggle_always_on_top).pack(side=tk.LEFT, padx=2)
+        ttk.Button(window_controls_frame, text="Maximize", command=self.maximize_window, width=10).pack(side=tk.LEFT, padx=2)
+        ttk.Button(window_controls_frame, text="Minimize", command=self.minimize_window, width=10).pack(side=tk.LEFT, padx=2)
+        ttk.Button(window_controls_frame, text="Full Screen", command=self.toggle_fullscreen, width=10).pack(side=tk.LEFT, padx=2)
+        
+        # Playback controls bar (horizontal, above video display)
+        playback_controls_bar = ttk.Frame(main_frame, padding="5")
+        playback_controls_bar.pack(fill=tk.X, pady=(5, 0))
+        
+        # Play/Pause button
+        self.play_button = ttk.Button(playback_controls_bar, text="▶ Play", command=self.toggle_play, width=10)
+        self.play_button.pack(side=tk.LEFT, padx=2)
+        
+        # First/Last frame buttons
+        ttk.Button(playback_controls_bar, text="⏮ First", command=self.first_frame, width=8).pack(side=tk.LEFT, padx=2)
+        ttk.Button(playback_controls_bar, text="⏭ Last", command=self.last_frame, width=8).pack(side=tk.LEFT, padx=2)
+        
+        # Previous/Next frame buttons
+        ttk.Button(playback_controls_bar, text="◀◀", command=self.prev_frame, width=4).pack(side=tk.LEFT, padx=2)
+        ttk.Button(playback_controls_bar, text="▶▶", command=self.next_frame, width=4).pack(side=tk.LEFT, padx=2)
+        
+        # Frame slider
+        ttk.Label(playback_controls_bar, text="Frame:").pack(side=tk.LEFT, padx=(10, 2))
+        self.frame_var = tk.IntVar()
+        self.frame_slider = ttk.Scale(playback_controls_bar, from_=0, to=100, 
+                                     orient=tk.HORIZONTAL, variable=self.frame_var,
+                                     command=self.on_slider_change, length=200)
+        self.frame_slider.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
+        
+        self.frame_label = ttk.Label(playback_controls_bar, text="Frame: 0 / 0", width=15)
+        self.frame_label.pack(side=tk.LEFT, padx=2)
+        
+        # Goto frame entry
+        ttk.Label(playback_controls_bar, text="Goto:").pack(side=tk.LEFT, padx=(10, 2))
+        self.goto_frame_var = tk.StringVar()
+        self.goto_frame_entry = ttk.Entry(playback_controls_bar, textvariable=self.goto_frame_var, width=8)
+        self.goto_frame_entry.pack(side=tk.LEFT, padx=2)
+        self.goto_frame_entry.bind("<Return>", lambda e: self.goto_frame())
+        ttk.Button(playback_controls_bar, text="Go", command=self.goto_frame, width=4).pack(side=tk.LEFT, padx=2)
+        
+        # Speed control
+        ttk.Label(playback_controls_bar, text="Speed:").pack(side=tk.LEFT, padx=(10, 2))
+        self.speed_var = tk.DoubleVar(value=1.0)
+        speed_spin = ttk.Spinbox(playback_controls_bar, from_=0.25, to=4.0, increment=0.25,
+                                 textvariable=self.speed_var, width=8)
+        speed_spin.pack(side=tk.LEFT, padx=2)
+        self.speed_var.trace_add('write', lambda *args: self.update_speed())
+        speed_spin.bind("<KeyRelease>", lambda e: self.update_speed())
+        
+        # Buffer status display
+        ttk.Label(playback_controls_bar, text="Buffer:").pack(side=tk.LEFT, padx=(10, 2))
+        self.buffer_status_label = ttk.Label(playback_controls_bar, text="0/0 frames", width=15, foreground="gray")
+        self.buffer_status_label.pack(side=tk.LEFT, padx=2)
+        
+        # Middle: Video display and controls
+        display_frame = ttk.Frame(main_frame)
+        display_frame.pack(fill=tk.BOTH, expand=True, pady=5)
+        
         # Video canvas
-        video_frame = ttk.Frame(main_frame)
+        video_frame = ttk.Frame(display_frame)
         video_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5)
         
         self.canvas = tk.Canvas(video_frame, bg='black')
         self.canvas.pack(fill=tk.BOTH, expand=True)
+        self.canvas.bind('<Button-1>', self.on_canvas_click)
+        self.canvas.bind('<B1-Motion>', self.on_canvas_drag)
+        self.canvas.bind('<ButtonRelease-1>', self.on_canvas_release)
+        self.canvas.bind('<MouseWheel>', self.on_canvas_wheel)
         
-        # Controls panel
-        controls_frame = ttk.Frame(main_frame, width=450)
-        controls_frame.pack(side=tk.RIGHT, fill=tk.Y, padx=5)
-        controls_frame.pack_propagate(False)
+        # Controls panel with tabs
+        controls_panel_bg = tk.Frame(display_frame, width=400, bg="lightgray", relief=tk.RAISED, borderwidth=2)
+        controls_panel_bg.pack(side=tk.RIGHT, fill=tk.Y, padx=5)
+        controls_panel_bg.pack_propagate(False)
         
-        # Playback controls
-        playback_frame = ttk.LabelFrame(controls_frame, text="Playback", padding=5)
-        playback_frame.pack(fill=tk.X, pady=5)
+        # Create notebook for tabs
+        self.controls_notebook = ttk.Notebook(controls_panel_bg)
+        self.controls_notebook.pack(fill=tk.BOTH, expand=True, padx=0, pady=0)
         
-        self.play_button = ttk.Button(playback_frame, text="▶ Play", command=self.toggle_play)
-        self.play_button.pack(fill=tk.X, pady=2)
+        # Tab 1: Playback & Overlays
+        playback_tab = ttk.Frame(self.controls_notebook, padding="5")
+        self.controls_notebook.add(playback_tab, text="Playback & Overlays")
         
-        nav_buttons = ttk.Frame(playback_frame)
-        nav_buttons.pack(fill=tk.X, pady=2)
-        ttk.Button(nav_buttons, text="◄◄ First", command=self.first_frame).pack(side=tk.LEFT, padx=2)
-        ttk.Button(nav_buttons, text="◄ Prev", command=self.prev_frame).pack(side=tk.LEFT, padx=2)
-        ttk.Button(nav_buttons, text="Next ►", command=self.next_frame).pack(side=tk.LEFT, padx=2)
-        ttk.Button(nav_buttons, text="Last ►►", command=self.last_frame).pack(side=tk.LEFT, padx=2)
+        # Tab 2: Visualization
+        visualization_tab = ttk.Frame(self.controls_notebook, padding="5")
+        self.controls_notebook.add(visualization_tab, text="Visualization")
         
-        # Frame slider
-        frame_frame = ttk.Frame(playback_frame)
-        frame_frame.pack(fill=tk.X, pady=5)
-        ttk.Label(frame_frame, text="Frame:").pack(side=tk.LEFT)
-        self.frame_var = tk.IntVar(value=0)
-        frame_scale = ttk.Scale(frame_frame, from_=0, to=999999, 
-                               variable=self.frame_var, orient=tk.HORIZONTAL)
-        frame_scale.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
-        frame_scale.bind('<ButtonRelease-1>', lambda e: self.goto_frame())
+        # Tab 3: Analytics
+        analytics_tab = ttk.Frame(self.controls_notebook, padding="5")
+        self.controls_notebook.add(analytics_tab, text="Analytics")
         
-        # Overlay controls
-        overlay_frame = ttk.LabelFrame(controls_frame, text="Overlays", padding=5)
+        # Create scrollable frames for tabs
+        self._create_playback_tab(playback_tab)
+        self._create_visualization_tab(visualization_tab)
+        self._create_analytics_tab(analytics_tab)
+        
+        # Status label
+        self.status_label = ttk.Label(main_frame, text="Ready")
+        self.status_label.pack(fill=tk.X, pady=5)
+    
+    def _create_playback_tab(self, parent):
+        """Create Playback & Overlays tab content"""
+        # Overlay toggles
+        overlay_frame = ttk.LabelFrame(parent, text="Overlays", padding=5)
         overlay_frame.pack(fill=tk.X, pady=5)
         
         self.show_players_var = tk.BooleanVar(value=True)
@@ -178,6 +313,11 @@ class PlaybackMode(BaseMode):
                        variable=self.show_ball_var,
                        command=self.update_display).pack(anchor=tk.W)
         
+        self.show_ball_trail = tk.BooleanVar(value=True)
+        ttk.Checkbutton(overlay_frame, text="Show Ball Trail", 
+                       variable=self.show_ball_trail,
+                       command=self.update_display).pack(anchor=tk.W)
+        
         self.show_labels_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(overlay_frame, text="Show Labels", 
                        variable=self.show_labels_var,
@@ -188,8 +328,105 @@ class PlaybackMode(BaseMode):
                        variable=self.show_trajectories_var,
                        command=self.update_display).pack(anchor=tk.W)
         
+        self.show_field_zones = tk.BooleanVar(value=False)
+        ttk.Checkbutton(overlay_frame, text="Show Field Zones", 
+                       variable=self.show_field_zones,
+                       command=self.update_display).pack(anchor=tk.W)
+        
+        # Player trails
+        trail_frame = ttk.LabelFrame(parent, text="Player Trails", padding=5)
+        trail_frame.pack(fill=tk.X, pady=5)
+        
+        ttk.Checkbutton(trail_frame, text="Show Player Trails", 
+                       variable=self.show_player_trail,
+                       command=self.update_display).pack(anchor=tk.W)
+        
+        trail_settings_frame = ttk.Frame(trail_frame)
+        trail_settings_frame.pack(fill=tk.X, padx=5, pady=2)
+        
+        ttk.Label(trail_settings_frame, text="Length:").pack(side=tk.LEFT, padx=2)
+        trail_length_spin = ttk.Spinbox(trail_settings_frame, from_=5, to=100, increment=5,
+                                       textvariable=self.player_trail_length, width=8,
+                                       command=self.update_display)
+        trail_length_spin.pack(side=tk.LEFT, padx=2)
+        
+        ttk.Label(trail_settings_frame, text="Size:").pack(side=tk.LEFT, padx=2)
+        trail_size_spin = ttk.Spinbox(trail_settings_frame, from_=2, to=10, increment=1,
+                                     textvariable=self.player_trail_size, width=8,
+                                     command=self.update_display)
+        trail_size_spin.pack(side=tk.LEFT, padx=2)
+        
+        ttk.Checkbutton(trail_frame, text="Fade older positions", 
+                       variable=self.player_trail_fade,
+                       command=self.update_display).pack(anchor=tk.W, pady=2)
+        
+        # Lost track predictions
+        predicted_frame = ttk.LabelFrame(parent, text="Lost Track Predictions", padding=5)
+        predicted_frame.pack(fill=tk.X, pady=5)
+        
+        ttk.Checkbutton(predicted_frame, text="Show Lost Track Predictions", 
+                       variable=self.show_predicted_boxes,
+                       command=self.update_display).pack(anchor=tk.W)
+        
+        pred_settings_frame = ttk.Frame(predicted_frame)
+        pred_settings_frame.pack(fill=tk.X, padx=5, pady=2)
+        
+        ttk.Label(pred_settings_frame, text="Duration (s):").pack(side=tk.LEFT, padx=2)
+        pred_duration_spin = ttk.Spinbox(pred_settings_frame, from_=0.5, to=5.0, increment=0.1,
+                                        textvariable=self.prediction_duration, width=8, format="%.1f",
+                                        command=self.update_display)
+        pred_duration_spin.pack(side=tk.LEFT, padx=2)
+        
+        ttk.Label(pred_settings_frame, text="Style:").pack(side=tk.LEFT, padx=2)
+        pred_style_combo = ttk.Combobox(pred_settings_frame, textvariable=self.prediction_style,
+                                       values=["dot", "box", "cross", "x", "arrow", "diamond"],
+                                       state="readonly", width=12)
+        pred_style_combo.pack(side=tk.LEFT, padx=2)
+        pred_style_combo.bind('<<ComboboxSelected>>', lambda e: self.update_display())
+        
+        ttk.Label(pred_settings_frame, text="Size:").pack(side=tk.LEFT, padx=2)
+        pred_size_spin = ttk.Spinbox(pred_settings_frame, from_=3, to=20, increment=1,
+                                    textvariable=self.prediction_size, width=8,
+                                    command=self.update_display)
+        pred_size_spin.pack(side=tk.LEFT, padx=2)
+    
+    def _create_visualization_tab(self, parent):
+        """Create Visualization tab content"""
+        # Zoom/Pan controls
+        zoom_frame = ttk.LabelFrame(parent, text="Zoom & Pan", padding=5)
+        zoom_frame.pack(fill=tk.X, pady=5)
+        
+        zoom_buttons = ttk.Frame(zoom_frame)
+        zoom_buttons.pack(fill=tk.X, pady=2)
+        ttk.Button(zoom_buttons, text="Zoom In (+)", command=lambda: self.zoom_single(1.2)).pack(side=tk.LEFT, padx=2)
+        ttk.Button(zoom_buttons, text="Zoom Out (-)", command=lambda: self.zoom_single(0.8)).pack(side=tk.LEFT, padx=2)
+        ttk.Button(zoom_buttons, text="Reset", command=self.reset_zoom_single).pack(side=tk.LEFT, padx=2)
+        
+        self.zoom_label = ttk.Label(zoom_frame, text="1.0x")
+        self.zoom_label.pack(pady=2)
+        
+        ttk.Label(zoom_frame, text="Right-click and drag to pan", 
+                 font=("Arial", 8), foreground="gray").pack(pady=2)
+        
+        # Event markers (if available)
+        if EVENT_MARKER_AVAILABLE and self.event_marker_system:
+            marker_frame = ttk.LabelFrame(parent, text="Event Markers", padding=5)
+            marker_frame.pack(fill=tk.X, pady=5)
+            
+            ttk.Checkbutton(marker_frame, text="Show Markers", 
+                           variable=self.event_marker_visible,
+                           command=self.update_display).pack(anchor=tk.W)
+            
+            ttk.Label(marker_frame, text="Event Type:").pack(anchor=tk.W, pady=(5, 0))
+            event_combo = ttk.Combobox(marker_frame, textvariable=self.current_event_type,
+                                      values=["pass", "shot", "goal", "tackle", "save", "corner"],
+                                      state='readonly', width=20)
+            event_combo.pack(fill=tk.X, pady=2)
+    
+    def _create_analytics_tab(self, parent):
+        """Create Analytics tab content"""
         # Analytics controls
-        analytics_frame = ttk.LabelFrame(controls_frame, text="Analytics", padding=5)
+        analytics_frame = ttk.LabelFrame(parent, text="Analytics Display", padding=5)
         analytics_frame.pack(fill=tk.X, pady=5)
         
         ttk.Checkbutton(analytics_frame, text="Show Analytics", 
@@ -208,24 +445,37 @@ class PlaybackMode(BaseMode):
         ttk.Button(analytics_frame, text="Select Analytics...", 
                   command=self.open_analytics_selection).pack(fill=tk.X, pady=2)
         
-        # Event markers (if available)
-        if EVENT_MARKER_AVAILABLE and self.event_marker_system:
-            marker_frame = ttk.LabelFrame(controls_frame, text="Event Markers", padding=5)
-            marker_frame.pack(fill=tk.X, pady=5)
-            
-            ttk.Checkbutton(marker_frame, text="Show Markers", 
-                           variable=self.event_marker_visible,
-                           command=self.update_display).pack(anchor=tk.W)
-            
-            ttk.Label(marker_frame, text="Event Type:").pack(anchor=tk.W, pady=(5, 0))
-            event_combo = ttk.Combobox(marker_frame, textvariable=self.current_event_type,
-                                      values=["pass", "shot", "goal", "tackle", "save", "corner"],
-                                      state='readonly', width=20)
-            event_combo.pack(fill=tk.X, pady=2)
+        # Analytics font settings
+        font_frame = ttk.LabelFrame(parent, text="Font Settings", padding=5)
+        font_frame.pack(fill=tk.X, pady=5)
         
-        # Status
-        self.status_label = ttk.Label(controls_frame, text="Ready")
-        self.status_label.pack(fill=tk.X, pady=5)
+        ttk.Label(font_frame, text="Font Scale:").pack(anchor=tk.W)
+        font_scale_spin = ttk.Spinbox(font_frame, from_=0.5, to=3.0, increment=0.1,
+                                     textvariable=self.analytics_font_scale, width=10,
+                                     command=self.update_display)
+        font_scale_spin.pack(fill=tk.X, pady=2)
+        
+        ttk.Label(font_frame, text="Font Thickness:").pack(anchor=tk.W)
+        font_thickness_spin = ttk.Spinbox(font_frame, from_=1, to=5, increment=1,
+                                         textvariable=self.analytics_font_thickness, width=10,
+                                         command=self.update_display)
+        font_thickness_spin.pack(fill=tk.X, pady=2)
+        
+        # Analytics panel sizes
+        size_frame = ttk.LabelFrame(parent, text="Panel Sizes", padding=5)
+        size_frame.pack(fill=tk.X, pady=5)
+        
+        ttk.Label(size_frame, text="Banner Height:").pack(anchor=tk.W)
+        banner_height_spin = ttk.Spinbox(size_frame, from_=50, to=500, increment=10,
+                                        textvariable=self.analytics_banner_height, width=10,
+                                        command=self.update_display)
+        banner_height_spin.pack(fill=tk.X, pady=2)
+        
+        ttk.Label(size_frame, text="Bar Width:").pack(anchor=tk.W)
+        bar_width_spin = ttk.Spinbox(size_frame, from_=100, to=500, increment=10,
+                                     textvariable=self.analytics_bar_width, width=10,
+                                     command=self.update_display)
+        bar_width_spin.pack(fill=tk.X, pady=2)
     
     def display_frame(self, frame: np.ndarray, frame_num: int):
         """Display a frame with overlays and analytics"""
@@ -234,8 +484,20 @@ class PlaybackMode(BaseMode):
         
         display_frame = frame.copy()
         
+        # Apply zoom/pan if needed
+        if self.zoom_level != 1.0 or self.pan_x != 0 or self.pan_y != 0:
+            display_frame = self.apply_zoom_pan_single(display_frame)
+        
         # Draw CSV overlays if available
         if self.csv_manager.is_loaded():
+            # Draw player trails first (behind players)
+            if self.show_player_trail.get():
+                display_frame = self.draw_player_trails(display_frame, frame_num)
+            
+            # Draw ball trail
+            if self.show_ball_trail.get():
+                display_frame = self.draw_ball_trail(display_frame, frame_num)
+            
             # Draw players
             if self.show_players_var.get():
                 player_data = self.csv_manager.get_player_data(frame_num)
@@ -267,6 +529,11 @@ class PlaybackMode(BaseMode):
             # Draw trajectories
             if self.show_trajectories_var.get():
                 display_frame = self.draw_trajectories(display_frame, frame_num)
+            
+            # Draw field zones (placeholder - would need field calibration data)
+            if self.show_field_zones.get():
+                # Field zones drawing would go here
+                pass
         
         # Render analytics
         if self.show_analytics.get() and self.analytics_data:
@@ -278,6 +545,30 @@ class PlaybackMode(BaseMode):
         
         # Display
         self._display_image(display_frame)
+    
+    def apply_zoom_pan_single(self, frame):
+        """Apply zoom and pan to frame"""
+        if self.zoom_level == 1.0 and self.pan_x == 0 and self.pan_y == 0:
+            return frame
+        
+        h, w = frame.shape[:2]
+        new_w = int(w * self.zoom_level)
+        new_h = int(h * self.zoom_level)
+        
+        zoomed = cv2.resize(frame, (new_w, new_h))
+        
+        crop_x = int((new_w - w) / 2 - self.pan_x)
+        crop_y = int((new_h - h) / 2 - self.pan_y)
+        
+        crop_x = max(0, min(crop_x, new_w - w))
+        crop_y = max(0, min(crop_y, new_h - h))
+        
+        if crop_x + w <= new_w and crop_y + h <= new_h:
+            cropped = zoomed[crop_y:crop_y+h, crop_x:crop_x+w]
+        else:
+            cropped = frame
+        
+        return cropped
     
     def render_analytics(self, display_frame: np.ndarray, frame_num: int) -> np.ndarray:
         """Render analytics overlay"""
@@ -815,13 +1106,15 @@ class PlaybackMode(BaseMode):
     def on_video_loaded(self):
         if self.video_manager.total_frames > 0:
             self.frame_var.set(0)
-            # Update scale range
-            for widget in self.parent_frame.winfo_children():
-                for child in widget.winfo_children():
-                    if isinstance(child, ttk.Scale):
-                        child.config(to=self.video_manager.total_frames - 1)
+            # Update frame slider range
+            if hasattr(self, 'frame_slider'):
+                self.frame_slider.config(to=max(100, self.video_manager.total_frames - 1))
+            if hasattr(self, 'frame_label'):
+                self.frame_label.config(text=f"Frame: 0 / {self.video_manager.total_frames - 1}")
             self.goto_frame(0)
             self.status_label.config(text=f"Video loaded: {self.video_manager.total_frames} frames")
+            # Update buffer status
+            self._update_buffer_status_label()
     
     def on_csv_loaded(self):
         """Called when CSV is loaded - extract analytics data"""
@@ -862,8 +1155,417 @@ class PlaybackMode(BaseMode):
         self.update_display()
         self.status_label.config(text="CSV loaded - Analytics available")
     
+    # ==================== FILE OPERATIONS ====================
+    
+    def load_video(self):
+        """Load video file"""
+        filename = filedialog.askopenfilename(
+            title="Select Video File",
+            filetypes=[("Video files", "*.mp4 *.avi *.mov *.mkv"), ("All files", "*.*")]
+        )
+        if filename:
+            self.video_manager.load_video(filename)
+            self.on_video_loaded()
+    
+    def load_csv(self, csv_path=None):
+        """Load CSV tracking data"""
+        if csv_path is None:
+            csv_path = filedialog.askopenfilename(
+                title="Select CSV Tracking File",
+                filetypes=[("CSV files", "*.csv"), ("All files", "*.*")]
+            )
+        if csv_path:
+            self.csv_manager.load_csv(csv_path)
+            self.on_csv_loaded()
+            # Start file watching if enabled
+            if self.watch_csv_enabled.get():
+                self.start_file_watching()
+    
+    def load_metadata_manual(self):
+        """Manually load overlay metadata file"""
+        if not self.video_manager.video_path:
+            messagebox.showwarning("No Video", "Please load a video file first")
+            return
+        
+        filename = filedialog.askopenfilename(
+            title="Select Overlay Metadata File",
+            filetypes=[("JSON files", "*.json"), ("All files", "*.*")]
+        )
+        if filename:
+            try:
+                # Try to import overlay metadata modules
+                try:
+                    from overlay_metadata import OverlayMetadata
+                    from overlay_renderer import OverlayRenderer
+                except ImportError:
+                    messagebox.showerror("Error", "Overlay metadata modules not available")
+                    return
+                
+                self.overlay_metadata = OverlayMetadata.load(filename)
+                self.overlay_renderer = OverlayRenderer(self.overlay_metadata, use_hd=False, quality="sd")
+                self.use_overlay_metadata.set(True)
+                messagebox.showinfo("Metadata Loaded", f"Loaded {len(self.overlay_metadata.overlays)} frames")
+                self.update_display()
+            except Exception as e:
+                messagebox.showerror("Error", f"Could not load metadata: {e}")
+    
+    def reload_csv(self):
+        """Reload CSV file"""
+        if not self.csv_manager.csv_path:
+            messagebox.showwarning("No CSV", "No CSV file loaded")
+            return
+        try:
+            self.load_csv(self.csv_manager.csv_path)
+            messagebox.showinfo("Reloaded", "CSV file reloaded successfully")
+        except Exception as e:
+            messagebox.showerror("Error", f"Could not reload CSV: {e}")
+    
+    def export_video(self):
+        """Export video with overlays"""
+        if not self.video_manager.video_path:
+            messagebox.showerror("Error", "Please load a video file first")
+            return
+        
+        output_path = filedialog.asksaveasfilename(
+            title="Save Video With Overlays",
+            defaultextension=".mp4",
+            filetypes=[("MP4 files", "*.mp4"), ("All files", "*.*")]
+        )
+        if not output_path:
+            return
+        
+        result = messagebox.askyesno(
+            "Export Video",
+            f"Export video with current overlay settings?\n\n"
+            f"Frames: {self.video_manager.total_frames}\n\n"
+            f"This may take a while. Continue?"
+        )
+        if not result:
+            return
+        
+        # Create progress window
+        progress_window = tk.Toplevel(self.viewer.root)
+        progress_window.title("Exporting Video")
+        progress_window.geometry("400x150")
+        progress_window.transient(self.viewer.root)
+        progress_window.grab_set()
+        
+        progress_label = ttk.Label(progress_window, text="Preparing export...")
+        progress_label.pack(pady=10)
+        
+        progress_var = tk.DoubleVar()
+        progress_bar = ttk.Progressbar(progress_window, variable=progress_var, maximum=100, length=350)
+        progress_bar.pack(pady=10)
+        
+        status_label = ttk.Label(progress_window, text="")
+        status_label.pack(pady=5)
+        
+        # Export in background thread
+        def export_thread():
+            try:
+                cap = cv2.VideoCapture(self.video_manager.video_path)
+                if not cap.isOpened():
+                    raise Exception("Could not open video")
+                
+                fps = self.video_manager.fps
+                width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+                
+                fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+                out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+                
+                if not out.isOpened():
+                    raise Exception("Could not create output video")
+                
+                frame_num = 0
+                start_time = time.time()
+                
+                while True:
+                    ret, frame = cap.read()
+                    if not ret:
+                        break
+                    
+                    # Render overlays
+                    display_frame = self.display_frame(frame.copy(), frame_num)
+                    
+                    # Write frame
+                    out.write(display_frame)
+                    
+                    frame_num += 1
+                    progress = (frame_num / total_frames) * 100
+                    progress_var.set(progress)
+                    
+                    elapsed = time.time() - start_time
+                    fps_current = frame_num / elapsed if elapsed > 0 else 0
+                    eta = (total_frames - frame_num) / fps_current if fps_current > 0 else 0
+                    
+                    status_text = f"Frame {frame_num}/{total_frames} ({progress:.1f}%) | ETA: {eta:.0f}s"
+                    status_label.config(text=status_text)
+                    progress_window.update()
+                
+                cap.release()
+                out.release()
+                
+                progress_window.after(0, progress_window.destroy)
+                self.viewer.root.after(0, lambda: messagebox.showinfo(
+                    "Export Complete",
+                    f"Video exported successfully!\n\nOutput: {output_path}"
+                ))
+            except Exception as e:
+                progress_window.after(0, progress_window.destroy)
+                self.viewer.root.after(0, lambda: messagebox.showerror("Export Error", str(e)))
+        
+        thread = threading.Thread(target=export_thread, daemon=True)
+        thread.start()
+    
+    # ==================== WINDOW CONTROLS ====================
+    
+    def toggle_always_on_top(self):
+        """Toggle always on top"""
+        self.viewer.root.attributes('-topmost', self.always_on_top.get())
+    
+    def maximize_window(self):
+        """Maximize window"""
+        self.viewer.root.state('zoomed')
+        self.is_maximized = True
+    
+    def minimize_window(self):
+        """Minimize window"""
+        self.viewer.root.iconify()
+    
+    def toggle_fullscreen(self):
+        """Toggle fullscreen"""
+        self.is_fullscreen = not self.is_fullscreen
+        self.viewer.root.attributes('-fullscreen', self.is_fullscreen)
+    
+    # ==================== PLAYBACK CONTROLS ====================
+    
+    def on_slider_change(self, value):
+        """Handle frame slider change"""
+        try:
+            frame_num = int(float(value))
+            self.frame_var.set(frame_num)
+            self.frame_label.config(text=f"Frame: {frame_num} / {self.video_manager.total_frames - 1}")
+        except:
+            pass
+    
+    def update_speed(self):
+        """Update playback speed"""
+        try:
+            self.playback_speed = self.speed_var.get()
+        except:
+            pass
+    
+    def goto_frame(self, frame_num=None):
+        """Go to specific frame"""
+        if frame_num is None:
+            try:
+                frame_num = int(self.goto_frame_var.get())
+            except:
+                frame_num = self.frame_var.get()
+        
+        frame_num = max(0, min(frame_num, self.video_manager.total_frames - 1))
+        self.frame_var.set(frame_num)
+        self.frame_slider.config(to=max(100, self.video_manager.total_frames - 1))
+        self.frame_label.config(text=f"Frame: {frame_num} / {self.video_manager.total_frames - 1}")
+        self.viewer.load_frame(frame_num)
+    
+    # ==================== CANVAS INTERACTIONS ====================
+    
+    def on_canvas_click(self, event):
+        """Handle canvas click"""
+        if event.num == 3:  # Right-click - start panning
+            self.is_panning = True
+            self.pan_start_x = event.x
+            self.pan_start_y = event.y
+    
+    def on_canvas_drag(self, event):
+        """Handle canvas drag"""
+        if self.is_panning:
+            dx = event.x - self.pan_start_x
+            dy = event.y - self.pan_start_y
+            self.pan_x += dx
+            self.pan_y += dy
+            self.pan_start_x = event.x
+            self.pan_start_y = event.y
+            self.update_display()
+    
+    def on_canvas_release(self, event):
+        """Handle canvas release"""
+        self.is_panning = False
+    
+    def on_canvas_wheel(self, event):
+        """Handle mouse wheel for zoom"""
+        if event.delta > 0:
+            self.zoom_single(1.1)
+        else:
+            self.zoom_single(0.9)
+    
+    # ==================== ZOOM/PAN ====================
+    
+    def zoom_single(self, zoom_factor):
+        """Zoom in/out"""
+        self.zoom_level = max(0.5, min(5.0, self.zoom_level * zoom_factor))
+        if hasattr(self, 'zoom_label'):
+            self.zoom_label.config(text=f"{self.zoom_level:.1f}x")
+        if self.zoom_level == 1.0:
+            self.pan_x = 0
+            self.pan_y = 0
+        self.update_display()
+    
+    def reset_zoom_single(self):
+        """Reset zoom and pan"""
+        self.zoom_level = 1.0
+        self.pan_x = 0
+        self.pan_y = 0
+        if hasattr(self, 'zoom_label'):
+            self.zoom_label.config(text="1.0x")
+        self.update_display()
+    
+    # ==================== FILE WATCHING ====================
+    
+    def start_file_watching(self):
+        """Start watching CSV file for changes"""
+        if self.watch_running:
+            return
+        
+        if not self.csv_manager.csv_path or not os.path.exists(self.csv_manager.csv_path):
+            return
+        
+        self.csv_last_modified = os.path.getmtime(self.csv_manager.csv_path)
+        self.watch_running = True
+        self.watch_thread = threading.Thread(target=self._watch_csv_file, daemon=True)
+        self.watch_thread.start()
+    
+    def stop_file_watching(self):
+        """Stop file watching"""
+        self.watch_running = False
+        if self.watch_thread:
+            self.watch_thread.join(timeout=1.0)
+    
+    def _watch_csv_file(self):
+        """Watch CSV file for changes"""
+        while self.watch_running:
+            try:
+                if self.watch_csv_enabled.get() and self.csv_manager.csv_path and os.path.exists(self.csv_manager.csv_path):
+                    current_mtime = os.path.getmtime(self.csv_manager.csv_path)
+                    if self.csv_last_modified is not None and current_mtime > self.csv_last_modified:
+                        self.csv_last_modified = current_mtime
+                        self.viewer.root.after(0, self._auto_reload_csv)
+                time.sleep(1.0)
+            except:
+                time.sleep(1.0)
+    
+    def _auto_reload_csv(self):
+        """Auto-reload CSV when file changes"""
+        if self.csv_manager.csv_path and os.path.exists(self.csv_manager.csv_path):
+            try:
+                self.load_csv(self.csv_manager.csv_path)
+                self.status_label.config(text=f"CSV auto-reloaded at {time.strftime('%H:%M:%S')}")
+            except:
+                pass
+    
+    def _update_buffer_status_label(self):
+        """Update buffer status label"""
+        try:
+            if not hasattr(self, 'buffer_status_label') or not self.buffer_status_label.winfo_exists():
+                return
+            
+            buffer_size = len(self.frame_buffer)
+            buffer_max = self.buffer_max_size
+            
+            fill_pct = int((buffer_size / buffer_max) * 100) if buffer_max > 0 else 0
+            
+            if fill_pct < 30:
+                color = "red"
+            elif fill_pct < 60:
+                color = "orange"
+            else:
+                color = "green"
+            
+            status_text = f"{buffer_size}/{buffer_max} ({fill_pct}%)"
+            self.buffer_status_label.config(text=status_text, foreground=color)
+        except (tk.TclError, AttributeError):
+            pass
+    
+    # ==================== ENHANCED DISPLAY ====================
+    
+    def draw_player_trails(self, display_frame: np.ndarray, frame_num: int) -> np.ndarray:
+        """Draw player movement trails"""
+        if not self.show_player_trail.get() or not self.csv_manager.is_loaded():
+            return display_frame
+        
+        from collections import deque
+        
+        # Initialize trails if needed
+        if not hasattr(self, 'player_trails'):
+            self.player_trails = {}
+        
+        # Update trails for each player
+        player_data = self.csv_manager.get_player_data(frame_num)
+        for player_id, (x, y, team, name, bbox) in player_data.items():
+            player_id_int = int(player_id)
+            
+            # Convert coordinates
+            if 0.0 <= x <= 1.0 and 0.0 <= y <= 1.0:
+                x = int(x * self.video_manager.width)
+                y = int(y * self.video_manager.height)
+            
+            # Initialize trail if needed
+            if player_id_int not in self.player_trails:
+                self.player_trails[player_id_int] = deque(maxlen=self.player_trail_length.get())
+            
+            # Add current position
+            self.player_trails[player_id_int].append((frame_num, int(x), int(y)))
+            
+            # Draw trail
+            trail_points = list(self.player_trails[player_id_int])
+            if len(trail_points) > 1:
+                color = self.get_player_color(player_id_int, team, name)
+                for i in range(len(trail_points) - 1):
+                    alpha = i / len(trail_points) if self.player_trail_fade.get() else 1.0
+                    size = self.player_trail_size.get()
+                    pt1 = (trail_points[i][1], trail_points[i][2])
+                    pt2 = (trail_points[i+1][1], trail_points[i+1][2])
+                    thickness = max(1, int(size * alpha))
+                    cv2.circle(display_frame, pt1, thickness, color, -1)
+                    if i < len(trail_points) - 1:
+                        cv2.line(display_frame, pt1, pt2, color, thickness)
+        
+        return display_frame
+    
+    def draw_ball_trail(self, display_frame: np.ndarray, frame_num: int) -> np.ndarray:
+        """Draw ball trail"""
+        if not self.show_ball_trail.get() or not self.csv_manager.is_loaded():
+            return display_frame
+        
+        # Update ball trail
+        ball_data = self.csv_manager.get_ball_data(frame_num)
+        if ball_data:
+            ball_x, ball_y, normalized = ball_data
+            if normalized:
+                ball_x = int(ball_x * self.video_manager.width)
+                ball_y = int(ball_y * self.video_manager.height)
+            
+            self.ball_trail.append((frame_num, int(ball_x), int(ball_y)))
+            if len(self.ball_trail) > 30:  # Keep last 30 positions
+                self.ball_trail.pop(0)
+        
+        # Draw trail
+        if len(self.ball_trail) > 1:
+            for i in range(len(self.ball_trail) - 1):
+                pt1 = (self.ball_trail[i][1], self.ball_trail[i][2])
+                pt2 = (self.ball_trail[i+1][1], self.ball_trail[i+1][2])
+                alpha = i / len(self.ball_trail)
+                color = (0, int(255 * alpha), 255)
+                cv2.line(display_frame, pt1, pt2, color, 2)
+        
+        return display_frame
+    
     def cleanup(self):
         if self.play_after_id:
             self.viewer.root.after_cancel(self.play_after_id)
         self.is_playing = False
         self.stop_buffer_thread()
+        self.stop_file_watching()
