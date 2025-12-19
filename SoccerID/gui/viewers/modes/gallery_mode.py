@@ -48,9 +48,7 @@ class GalleryMode(BaseMode):
     
     def __init__(self, parent_frame, viewer, video_manager, detection_manager, 
                  reid_manager, gallery_manager, csv_manager, anchor_manager):
-        super().__init__(parent_frame, viewer, video_manager, detection_manager,
-                        reid_manager, gallery_manager, csv_manager, anchor_manager)
-        
+        # Initialize attributes BEFORE calling super (which calls create_ui)
         # YOLO model
         self.yolo_model = None
         
@@ -69,6 +67,10 @@ class GalleryMode(BaseMode):
         self.is_panning = False
         self.pan_start_x = 0
         self.pan_start_y = 0
+        
+        # Now call super (which will call create_ui)
+        super().__init__(parent_frame, viewer, video_manager, detection_manager,
+                        reid_manager, gallery_manager, csv_manager, anchor_manager)
     
     def create_ui(self):
         """Create gallery mode UI"""
