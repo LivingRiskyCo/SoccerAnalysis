@@ -875,32 +875,40 @@ Ready to begin?"""
                           TOOLTIP_DATABASE.get("playback_viewer", {}).get("text", "Open playback viewer for analyzed video"),
                           TOOLTIP_DATABASE.get("playback_viewer", {}).get("detailed"))
         
+        self.event_timeline_button = ttk.Button(right_panel, text="📊 Event Timeline", 
+                                                command=self.open_event_timeline_viewer, width=20)
+        self.event_timeline_button.grid(row=35, column=0, padx=5, pady=3, sticky=tk.W+tk.E)
+        if create_tooltip:
+            create_tooltip(self.event_timeline_button,
+                          "Open Event Timeline Viewer to view, create clips, and manage game events",
+                          "View all detected events (passes, shots, goals, etc.) on a timeline. Create video clips from events and tag them to players.")
+        
         self.speed_tracking_button = ttk.Button(right_panel, text="Speed Tracking", 
                                                command=self.open_speed_tracking, width=20)
-        self.speed_tracking_button.grid(row=35, column=0, padx=5, pady=3, sticky=tk.W+tk.E)
+        self.speed_tracking_button.grid(row=36, column=0, padx=5, pady=3, sticky=tk.W+tk.E)
         
         # Project Management
-        ttk.Label(right_panel, text="Project Management:", font=("Arial", 9, "bold")).grid(row=36, column=0, sticky=tk.W, pady=(15, 5))
+        ttk.Label(right_panel, text="Project Management:", font=("Arial", 9, "bold")).grid(row=37, column=0, sticky=tk.W, pady=(15, 5))
         
         self.create_project_button = ttk.Button(right_panel, text="Create New Project", 
                                                command=self.create_new_project, width=20)
-        self.create_project_button.grid(row=37, column=0, padx=5, pady=3, sticky=tk.W+tk.E)
+        self.create_project_button.grid(row=38, column=0, padx=5, pady=3, sticky=tk.W+tk.E)
         
         self.save_project_button = ttk.Button(right_panel, text="Save Project", 
                                               command=self.save_project, width=20)
-        self.save_project_button.grid(row=38, column=0, padx=5, pady=3, sticky=tk.W+tk.E)
+        self.save_project_button.grid(row=39, column=0, padx=5, pady=3, sticky=tk.W+tk.E)
         
         self.save_project_as_button = ttk.Button(right_panel, text="Save Project As...", 
                                                  command=self.save_project_as, width=20)
-        self.save_project_as_button.grid(row=39, column=0, padx=5, pady=3, sticky=tk.W+tk.E)
+        self.save_project_as_button.grid(row=40, column=0, padx=5, pady=3, sticky=tk.W+tk.E)
         
         self.load_project_button = ttk.Button(right_panel, text="Load Project", 
                                               command=self.load_project, width=20)
-        self.load_project_button.grid(row=40, column=0, padx=5, pady=3, sticky=tk.W+tk.E)
+        self.load_project_button.grid(row=41, column=0, padx=5, pady=3, sticky=tk.W+tk.E)
         
         self.rename_project_button = ttk.Button(right_panel, text="Rename Project", 
                                                 command=self.rename_project, width=20)
-        self.rename_project_button.grid(row=41, column=0, padx=5, pady=3, sticky=tk.W+tk.E)
+        self.rename_project_button.grid(row=42, column=0, padx=5, pady=3, sticky=tk.W+tk.E)
         
         right_panel.columnconfigure(0, weight=1)
     
@@ -2338,6 +2346,29 @@ Playback Viewer:
         """Open player gallery seeder for cross-video player recognition"""
         # Use unified viewer in gallery mode
         self.open_unified_viewer(mode='gallery')
+    
+    def open_event_timeline_viewer(self):
+        """Open event timeline viewer directly"""
+        # First, try to open playback viewer if video/CSV is loaded
+        video_path = None
+        csv_path = None
+        
+        if hasattr(self, 'input_file') and self.input_file.get():
+            video_path = self.input_file.get()
+        if hasattr(self, 'output_file') and self.output_file.get():
+            csv_path = self.output_file.get()
+        
+        if not video_path:
+            messagebox.showinfo("No Video", 
+                              "Please load a video file first.\n\n"
+                              "Event Timeline Viewer requires a video file to display events.")
+            return
+        
+        # Open unified viewer in playback mode, which has event timeline access
+        self.open_unified_viewer(mode='playback', video_path=video_path, csv_path=csv_path)
+        
+        # Note: Event Timeline Viewer can be opened from within PlaybackMode
+        # This button opens playback viewer where user can access Event Timeline
     
     def open_track_converter(self):
         """Open track converter to convert CSV tags to anchor frames"""
