@@ -281,7 +281,8 @@ class PlaybackMode(BaseMode):
         
         # Frame slider
         ttk.Label(playback_controls_bar, text="Frame:").pack(side=tk.LEFT, padx=(10, 2))
-        self.frame_var = tk.IntVar()
+        if self.frame_var is None:
+            self.frame_var = tk.IntVar()
         self.frame_slider = ttk.Scale(playback_controls_bar, from_=0, to=100, 
                                      orient=tk.HORIZONTAL, variable=self.frame_var,
                                      command=self.on_slider_change, length=200)
@@ -292,7 +293,8 @@ class PlaybackMode(BaseMode):
         
         # Goto frame entry
         ttk.Label(playback_controls_bar, text="Goto:").pack(side=tk.LEFT, padx=(10, 2))
-        self.goto_frame_var = tk.StringVar()
+        if self.goto_frame_var is None:
+            self.goto_frame_var = tk.StringVar()
         self.goto_frame_entry = ttk.Entry(playback_controls_bar, textvariable=self.goto_frame_var, width=8)
         self.goto_frame_entry.pack(side=tk.LEFT, padx=2)
         self.goto_frame_entry.bind("<Return>", lambda e: self.goto_frame())
@@ -300,7 +302,8 @@ class PlaybackMode(BaseMode):
         
         # Speed control
         ttk.Label(playback_controls_bar, text="Speed:").pack(side=tk.LEFT, padx=(10, 2))
-        self.speed_var = tk.DoubleVar(value=1.0)
+        if self.speed_var is None:
+            self.speed_var = tk.DoubleVar(value=1.0)
         speed_spin = ttk.Spinbox(playback_controls_bar, from_=0.25, to=4.0, increment=0.25,
                                  textvariable=self.speed_var, width=8)
         speed_spin.pack(side=tk.LEFT, padx=2)
