@@ -127,6 +127,18 @@ class PlaybackMode(BaseMode):
         self.watch_thread = None
         self.watch_running = False
         
+        # UI variables that will be created in create_ui() - initialize as None for safety
+        self.frame_var = None
+        self.status_label = None
+        self.frame_slider = None
+        self.frame_label = None
+        self.goto_frame_var = None
+        self.goto_frame_entry = None
+        self.speed_var = None
+        self.buffer_status_label = None
+        self.play_button = None
+        self.canvas = None
+        
         # Now call super (which will call create_ui)
         super().__init__(parent_frame, viewer, video_manager, detection_manager,
                         reid_manager, gallery_manager, csv_manager, anchor_manager)
@@ -253,8 +265,11 @@ class PlaybackMode(BaseMode):
         playback_controls_bar.pack(fill=tk.X, pady=(5, 0))
         
         # Play/Pause button
-        self.play_button = ttk.Button(playback_controls_bar, text="▶ Play", command=self.toggle_play, width=10)
-        self.play_button.pack(side=tk.LEFT, padx=2)
+        if self.play_button is None:
+            self.play_button = ttk.Button(playback_controls_bar, text="▶ Play", command=self.toggle_play, width=10)
+            self.play_button.pack(side=tk.LEFT, padx=2)
+        else:
+            self.play_button.pack(side=tk.LEFT, padx=2)
         
         # First/Last frame buttons
         ttk.Button(playback_controls_bar, text="⏮ First", command=self.first_frame, width=8).pack(side=tk.LEFT, padx=2)
@@ -305,8 +320,11 @@ class PlaybackMode(BaseMode):
         video_frame = ttk.Frame(display_frame)
         video_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5)
         
-        self.canvas = tk.Canvas(video_frame, bg='black')
-        self.canvas.pack(fill=tk.BOTH, expand=True)
+        if self.canvas is None:
+            self.canvas = tk.Canvas(video_frame, bg='black')
+            self.canvas.pack(fill=tk.BOTH, expand=True)
+        else:
+            self.canvas.pack(fill=tk.BOTH, expand=True)
         self.canvas.bind('<Button-1>', self.on_canvas_click)
         self.canvas.bind('<B1-Motion>', self.on_canvas_drag)
         self.canvas.bind('<ButtonRelease-1>', self.on_canvas_release)
@@ -339,8 +357,11 @@ class PlaybackMode(BaseMode):
         self._create_analytics_tab(analytics_tab)
         
         # Status label
-        self.status_label = ttk.Label(main_frame, text="Ready")
-        self.status_label.pack(fill=tk.X, pady=5)
+        if self.status_label is None:
+            self.status_label = ttk.Label(main_frame, text="Ready")
+            self.status_label.pack(fill=tk.X, pady=5)
+        else:
+            self.status_label.pack(fill=tk.X, pady=5)
     
     def _create_playback_tab(self, parent):
         """Create Playback & Overlays tab content"""
@@ -1203,24 +1224,36 @@ class PlaybackMode(BaseMode):
     
     def goto_frame(self, frame_num=None):
         if frame_num is None:
-            frame_num = self.frame_var.get()
+            if self.frame_var is not None:
+                frame_num = self.frame_var.get()
+            elif self.goto_frame_var is not None:
+                try:
+                    frame_num = int(self.goto_frame_var.get())
+                except (ValueError, TypeError):
+                    return
+            else:
+                return
         
         frame_num = max(0, min(frame_num, self.video_manager.total_frames - 1))
-        self.frame_var.set(frame_num)
+        if self.frame_var is not None:
+            self.frame_var.set(frame_num)
         self.viewer.load_frame(frame_num)
     
     def on_video_loaded(self):
         if self.video_manager.total_frames > 0:
-            self.frame_var.set(0)
+            if self.frame_var is not None:
+                self.frame_var.set(0)
             # Update frame slider range
-            if hasattr(self, 'frame_slider'):
+            if self.frame_slider is not None:
                 self.frame_slider.config(to=max(100, self.video_manager.total_frames - 1))
-            if hasattr(self, 'frame_label'):
+            if self.frame_label is not None:
                 self.frame_label.config(text=f"Frame: 0 / {self.video_manager.total_frames - 1}")
             self.goto_frame(0)
-            self.status_label.config(text=f"Video loaded: {self.video_manager.total_frames} frames")
+            if self.status_label is not None:
+                self.status_label.config(text=f"Video loaded: {self.video_manager.total_frames} frames")
             # Update buffer status
-            self._update_buffer_status_label()
+            if hasattr(self, '_update_buffer_status_label'):
+                self._update_buffer_status_label()
     
     def on_csv_loaded(self):
         """Called when CSV is loaded - extract analytics data"""
@@ -1262,7 +1295,8 @@ class PlaybackMode(BaseMode):
             self.update_heatmap_player_dropdown()
         
         self.update_display()
-        self.status_label.config(text="CSV loaded - Analytics available")
+        if self.status_label is not None:
+            self.status_label.config(text="CSV loaded - Analytics available")
     
     def update_heatmap_player_dropdown(self):
         """Update heatmap player dropdown with available players"""
