@@ -68,6 +68,14 @@ class SetupMode(BaseMode):
         self.player_roster = {}  # player_name -> {active: bool, team: str, ...}
         self.roster_manager = None
         
+        # Undo/Redo system
+        self.undo_stack = []  # List of (action_type, action_data) tuples
+        self.redo_stack = []
+        self.max_undo_history = 50
+        
+        # Detection history for navigation
+        self.detections_history = {}  # frame_num -> detections
+        
         # Load player names and team colors
         self.load_player_name_list()
         self.load_team_colors()
@@ -197,7 +205,12 @@ class SetupMode(BaseMode):
         jersey_entry.pack(fill=tk.X, pady=2)
         jersey_entry.bind('<Return>', lambda e: self.tag_player())
         
-        ttk.Button(tag_frame, text="Tag Selected Player", command=self.tag_player).pack(fill=tk.X, pady=5)
+        tag_buttons = ttk.Frame(tag_frame)
+        tag_buttons.pack(fill=tk.X, pady=5)
+        ttk.Button(tag_buttons, text="Tag Player", command=self.tag_player).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=2)
+        ttk.Button(tag_buttons, text="Tag All Instances", command=self.tag_all_instances).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=2)
+        
+        ttk.Button(tag_frame, text="Tag All Players (All Frames)", command=self.tag_all_instances_all_players).pack(fill=tk.X, pady=2)
         ttk.Button(tag_frame, text="Clear Tag", command=self.clear_tag).pack(fill=tk.X, pady=2)
         
         # Detections list
@@ -217,16 +230,52 @@ class SetupMode(BaseMode):
         self.detections_listbox.bind('<<ListboxSelect>>', self.on_detection_select)
         self.detections_listbox.bind('<Double-Button-1>', lambda e: self.tag_player())
         
-        # Summary
-        summary_frame = ttk.LabelFrame(controls_frame, text="Summary", padding=5)
+        # Summary and Progress
+        summary_frame = ttk.LabelFrame(controls_frame, text="Summary & Progress", padding=5)
         summary_frame.pack(fill=tk.X, pady=5)
         
         self.summary_label = ttk.Label(summary_frame, text="No tags yet", wraplength=400)
         self.summary_label.pack(fill=tk.X)
         
+        # Progress indicator
+        progress_frame = ttk.Frame(summary_frame)
+        progress_frame.pack(fill=tk.X, pady=(5, 0))
+        
+        self.progress_label = ttk.Label(progress_frame, text="Progress: 0%", foreground="blue")
+        self.progress_label.pack(side=tk.LEFT)
+        
+        self.progress_bar = ttk.Progressbar(progress_frame, mode='determinate', length=200)
+        self.progress_bar.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
+        
         # Status
         self.status_label = ttk.Label(controls_frame, text="Ready - Load video and initialize detection")
         self.status_label.pack(fill=tk.X, pady=5)
+        
+        # Navigation shortcuts
+        nav_shortcuts_frame = ttk.LabelFrame(controls_frame, text="Navigation Shortcuts", padding=5)
+        nav_shortcuts_frame.pack(fill=tk.X, pady=5)
+        
+        nav_shortcuts_inner = ttk.Frame(nav_shortcuts_frame)
+        nav_shortcuts_inner.pack(fill=tk.X)
+        
+        ttk.Button(nav_shortcuts_inner, text="Next Untagged (N)", command=self.jump_to_next_untagged).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=2)
+        ttk.Button(nav_shortcuts_inner, text="Prev Untagged (P)", command=self.jump_to_prev_untagged).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=2)
+        
+        # Goto Track ID
+        goto_frame = ttk.Frame(nav_shortcuts_frame)
+        goto_frame.pack(fill=tk.X, pady=(5, 0))
+        ttk.Label(goto_frame, text="Goto Track ID:").pack(side=tk.LEFT, padx=2)
+        self.goto_track_var = tk.StringVar()
+        goto_entry = ttk.Entry(goto_frame, textvariable=self.goto_track_var, width=10)
+        goto_entry.pack(side=tk.LEFT, padx=2)
+        goto_entry.bind('<Return>', lambda e: self.goto_track_id())
+        ttk.Button(goto_frame, text="Go", command=self.goto_track_id).pack(side=tk.LEFT, padx=2)
+        
+        # Undo/Redo
+        undo_frame = ttk.Frame(controls_frame)
+        undo_frame.pack(fill=tk.X, pady=5)
+        ttk.Button(undo_frame, text="↶ Undo (U)", command=self.undo_action).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=2)
+        ttk.Button(undo_frame, text="↷ Redo (R)", command=self.redo_action).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=2)
         
         # Save/Load buttons
         save_frame = ttk.Frame(controls_frame)
@@ -234,10 +283,23 @@ class SetupMode(BaseMode):
         ttk.Button(save_frame, text="Save Tags", command=self.save_tags).pack(fill=tk.X, pady=2)
         ttk.Button(save_frame, text="Import Seed Config", command=self.import_seed_config).pack(fill=tk.X, pady=2)
         
-        # Bind keyboard shortcuts
-        self.canvas.focus_set()
-        self.canvas.bind('<KeyPress-b>', lambda e: self.enable_ball_click())
-        self.canvas.bind('<KeyPress-t>', lambda e: self.tag_player() if self.selected_detection is not None else None)
+        # Bind keyboard shortcuts (bind to root for global access)
+        self.viewer.root.bind('<KeyPress-b>', lambda e: self._handle_keyboard_shortcut('b', e))
+        self.viewer.root.bind('<KeyPress-B>', lambda e: self._handle_keyboard_shortcut('b', e))
+        self.viewer.root.bind('<KeyPress-t>', lambda e: self._handle_keyboard_shortcut('t', e))
+        self.viewer.root.bind('<KeyPress-T>', lambda e: self._handle_keyboard_shortcut('t', e))
+        self.viewer.root.bind('<KeyPress-n>', lambda e: self._handle_keyboard_shortcut('n', e))
+        self.viewer.root.bind('<KeyPress-N>', lambda e: self._handle_keyboard_shortcut('n', e))
+        self.viewer.root.bind('<KeyPress-p>', lambda e: self._handle_keyboard_shortcut('p', e))
+        self.viewer.root.bind('<KeyPress-P>', lambda e: self._handle_keyboard_shortcut('p', e))
+        self.viewer.root.bind('<KeyPress-u>', lambda e: self._handle_keyboard_shortcut('u', e))
+        self.viewer.root.bind('<KeyPress-U>', lambda e: self._handle_keyboard_shortcut('u', e))
+        self.viewer.root.bind('<KeyPress-r>', lambda e: self._handle_keyboard_shortcut('r', e))
+        self.viewer.root.bind('<KeyPress-R>', lambda e: self._handle_keyboard_shortcut('r', e))
+        self.viewer.root.bind('<KeyPress-a>', lambda e: self._handle_keyboard_shortcut('a', e))
+        self.viewer.root.bind('<KeyPress-A>', lambda e: self._handle_keyboard_shortcut('a', e))
+        self.viewer.root.bind('<KeyPress-g>', lambda e: self._handle_keyboard_shortcut('g', e))
+        self.viewer.root.bind('<KeyPress-G>', lambda e: self._handle_keyboard_shortcut('g', e))
         
         # Update quick tag dropdown
         self.update_quick_tag_dropdown()
@@ -836,12 +898,17 @@ class SetupMode(BaseMode):
                 frame = self.video_manager.get_frame(i)
                 if frame is not None:
                     self.detection_manager.detect_frame(frame, i)
+                    # Store in history
+                    detections = self.detection_manager.get_detections(i)
+                    if detections is not None:
+                        self.detections_history[i] = detections
                     if i % 5 == 0:
                         self.status_label.config(text=f"Processing frame {i}/{frames_to_process}...")
                         self.viewer.root.update()
             
             self.status_label.config(text="Detection initialized - Ready for tagging")
             self.load_frame(0)
+            self.update_progress()
         else:
             messagebox.showerror("Error", "Failed to initialize detection")
             self.status_label.config(text="Error initializing detection")
@@ -968,10 +1035,21 @@ class SetupMode(BaseMode):
             except:
                 pass
         
-        # Validate jersey number
-        if jersey_number and not jersey_number.isdigit():
-            messagebox.showwarning("Warning", "Jersey number must be a number or left blank")
-            return
+        # Validate tag
+        validation_warnings = self.validate_tag(player_name, team, jersey_number)
+        if validation_warnings:
+            warning_msg = "Validation warnings:\n\n" + "\n".join(validation_warnings)
+            response = messagebox.askyesno("Validation Warnings", warning_msg + "\n\nContinue anyway?")
+            if not response:
+                return
+        
+        # Save state for undo
+        old_mapping = self.viewer.approved_mappings.get(pid_str)
+        self._save_undo_state("tag_player", {
+            'track_id': int(track_id),
+            'old_mapping': old_mapping,
+            'new_mapping': (player_name, team, jersey_number)
+        })
         
         # Store mapping
         self.viewer.approved_mappings[pid_str] = (player_name, team, jersey_number)
@@ -1023,6 +1101,13 @@ class SetupMode(BaseMode):
             return
         
         pid_str = str(int(track_id))
+        
+        # Save state for undo
+        old_mapping = self.viewer.approved_mappings.get(pid_str)
+        self._save_undo_state("clear_tag", {
+            'track_id': int(track_id),
+            'old_mapping': old_mapping
+        })
         
         # Remove from mappings
         if pid_str in self.viewer.approved_mappings:
@@ -1108,13 +1193,16 @@ class SetupMode(BaseMode):
             self.update_display()
     
     def update_summary(self):
-        """Update summary label"""
+        """Update summary label and progress"""
         mappings = self.viewer.get_approved_mappings()
         anchor_count = self.anchor_manager.count_anchors()
         ball_count = len(self.ball_positions)
         
         summary = f"Tagged: {len(mappings)} players, {anchor_count} anchor frames, {ball_count} ball positions"
         self.summary_label.config(text=summary)
+        
+        # Update progress
+        self.update_progress()
     
     # ==================== SEED CONFIG LOAD/SAVE ====================
     
@@ -1430,6 +1518,480 @@ class SetupMode(BaseMode):
         # Pre-populate tags from CSV
         self.pre_populate_from_csv()
         self.status_label.config(text="CSV loaded - Player assignments applied")
+    
+    # ==================== ENHANCEMENTS ====================
+    
+    def _handle_keyboard_shortcut(self, key, event):
+        """Handle keyboard shortcuts, ignoring if user is typing"""
+        # Check if focus is on an entry widget
+        try:
+            widget = self.viewer.root.focus_get()
+            if isinstance(widget, (tk.Entry, ttk.Combobox, tk.Text)):
+                return  # User is typing, ignore shortcut
+        except:
+            pass
+        
+        # Execute shortcut
+        key_lower = key.lower()
+        if key_lower == 'b':
+            self.enable_ball_click()
+        elif key_lower == 't' and self.selected_detection is not None:
+            self.tag_player()
+        elif key_lower == 'n':
+            self.jump_to_next_untagged()
+        elif key_lower == 'p':
+            self.jump_to_prev_untagged()
+        elif key_lower == 'u':
+            self.undo_action()
+        elif key_lower == 'r':
+            self.redo_action()
+        elif key_lower == 'a' and self.selected_detection is not None:
+            self.tag_all_instances()
+        elif key_lower == 'g':
+            self.goto_track_id()
+    
+    def jump_to_next_untagged(self):
+        """Jump to next frame with untagged players"""
+        if not self.detections_history:
+            # Try to build detections history from detection_manager
+            self._build_detections_history()
+        
+        if not self.detections_history:
+            messagebox.showinfo("No Detections", "Please initialize detection first")
+            return
+        
+        # First, check if current frame has all players tagged
+        # If so, auto-tag all instances of all tagged players, then move to next
+        detections = self.detection_manager.get_detections(self.viewer.current_frame_num)
+        if detections is not None and len(detections) > 0:
+            all_tagged = True
+            for track_id in detections.tracker_id:
+                if track_id is None:
+                    continue
+                pid_str = str(int(track_id))
+                if pid_str not in self.viewer.approved_mappings:
+                    all_tagged = False
+                    break
+            
+            # If all players in current frame are tagged, tag all instances of all of them
+            if all_tagged:
+                self.tag_all_instances_all_players(silent=True)
+        
+        start_frame = self.viewer.current_frame_num + 1
+        for frame_num in range(start_frame, self.video_manager.total_frames):
+            detections = self.detection_manager.get_detections(frame_num)
+            if detections is not None and len(detections) > 0:
+                # Check if any detection is untagged
+                for track_id in detections.tracker_id:
+                    if track_id is None:
+                        continue
+                    pid_str = str(int(track_id))
+                    if pid_str not in self.viewer.approved_mappings:
+                        # Found untagged frame
+                        self.goto_frame(frame_num)
+                        return
+        
+        # If no untagged frames found, show message
+        messagebox.showinfo("No Untagged Frames", "All frames have been tagged!")
+    
+    def jump_to_prev_untagged(self):
+        """Jump to previous frame with untagged players"""
+        if not self.detections_history:
+            self._build_detections_history()
+        
+        if not self.detections_history:
+            messagebox.showinfo("No Detections", "Please initialize detection first")
+            return
+        
+        start_frame = self.viewer.current_frame_num - 1
+        for frame_num in range(start_frame, -1, -1):
+            detections = self.detection_manager.get_detections(frame_num)
+            if detections is not None and len(detections) > 0:
+                # Check if any detection is untagged
+                for track_id in detections.tracker_id:
+                    if track_id is None:
+                        continue
+                    pid_str = str(int(track_id))
+                    if pid_str not in self.viewer.approved_mappings:
+                        # Found untagged frame
+                        self.goto_frame(frame_num)
+                        return
+        
+        # If no untagged frames found, show message
+        messagebox.showinfo("No Untagged Frames", "All frames before this have been tagged!")
+    
+    def _build_detections_history(self):
+        """Build detections history from detection_manager"""
+        self.detections_history = {}
+        # Scan through frames to build history
+        for frame_num in range(min(100, self.video_manager.total_frames)):  # Limit to first 100 for performance
+            detections = self.detection_manager.get_detections(frame_num)
+            if detections is not None and len(detections) > 0:
+                self.detections_history[frame_num] = detections
+    
+    def goto_track_id(self):
+        """Go to frame containing specified track ID"""
+        try:
+            track_id_str = self.goto_track_var.get().strip()
+            if not track_id_str:
+                messagebox.showwarning("No Track ID", "Please enter a track ID to search for")
+                return
+            
+            try:
+                target_track_id = int(track_id_str)
+            except ValueError:
+                messagebox.showerror("Invalid Input", f"'{track_id_str}' is not a valid track ID number")
+                return
+            
+            # Search from current frame forward, then wrap around
+            search_order = list(range(self.viewer.current_frame_num + 1, self.video_manager.total_frames)) + \
+                          list(range(0, self.viewer.current_frame_num + 1))
+            
+            found_frame = None
+            for frame_num in search_order:
+                detections = self.detection_manager.get_detections(frame_num)
+                if detections is not None:
+                    for track_id in detections.tracker_id:
+                        if track_id is not None and int(track_id) == target_track_id:
+                            found_frame = frame_num
+                            break
+                    if found_frame is not None:
+                        break
+            
+            if found_frame is not None:
+                self.goto_frame(found_frame)
+                messagebox.showinfo("Found", f"Track ID #{target_track_id} found at frame {found_frame + 1}")
+            else:
+                messagebox.showinfo("Not Found", f"Track ID #{target_track_id} not found in video")
+        except Exception as e:
+            messagebox.showerror("Error", f"Could not search for track ID: {e}")
+    
+    def tag_all_instances(self):
+        """Tag all instances of the selected track ID across all frames"""
+        if self.selected_detection is None:
+            messagebox.showwarning("Warning", "Please select a detection first")
+            return
+        
+        detections = self.detection_manager.get_detections(self.viewer.current_frame_num)
+        if detections is None or self.selected_detection >= len(detections.tracker_id):
+            messagebox.showwarning("Warning", "Selected detection is no longer valid")
+            self.selected_detection = None
+            return
+        
+        track_id = detections.tracker_id[self.selected_detection]
+        if track_id is None:
+            return
+        
+        pid_str = str(int(track_id))
+        
+        # Get current name, team, and jersey number
+        player_name = self.player_name_var.get().strip()
+        if not player_name:
+            messagebox.showwarning("Warning", "Please select or enter a player name first")
+            return
+        
+        team = self.team_var.get().strip()
+        jersey_number = self.jersey_number_var.get().strip()
+        
+        # Validate team (except for coaches, referees, etc.)
+        coach_names = {"Kevin Hill", "Coach", "coach"}
+        is_coach = any(coach.lower() in player_name.lower() for coach in coach_names)
+        is_referee = "referee" in player_name.lower() or "ref" in player_name.lower()
+        is_other = player_name.lower() in ["other", "guest player", "guest", "unknown"]
+        
+        if not team and not (is_coach or is_referee or is_other):
+            messagebox.showwarning("Team Required", 
+                f"Please select a team for '{player_name}'.\n\n"
+                "All players must be assigned to a team (Team 1 or Team 2).\n"
+                "Coaches, referees, and 'Other' players are exempt from this requirement.")
+            return
+        
+        # Count how many frames this ID appears in
+        count = 0
+        for frame_num in range(self.video_manager.total_frames):
+            frame_detections = self.detection_manager.get_detections(frame_num)
+            if frame_detections is not None:
+                for tid in frame_detections.tracker_id:
+                    if tid is not None and int(tid) == int(track_id):
+                        count += 1
+                        break
+        
+        response = messagebox.askyesno(
+            "Tag All Instances?",
+            f"Tag all instances of ID #{track_id} as '{player_name}'?\n\n"
+            f"This will tag {count} frames.\n"
+            f"Continue?"
+        )
+        
+        if response:
+            # Save state for undo
+            self._save_undo_state("tag_all_instances", {
+                'track_id': int(track_id),
+                'player_name': player_name,
+                'team': team,
+                'jersey_number': jersey_number
+            })
+            
+            # Tag all instances
+            instances_tagged = 0
+            for frame_num in range(self.video_manager.total_frames):
+                frame_detections = self.detection_manager.get_detections(frame_num)
+                if frame_detections is not None:
+                    for i, tid in enumerate(frame_detections.tracker_id):
+                        if tid is not None and int(tid) == int(track_id):
+                            # Tag this instance
+                            self.viewer.approved_mappings[pid_str] = (player_name, team, jersey_number)
+                            
+                            # Create anchor frame
+                            if i < len(frame_detections.xyxy):
+                                bbox = frame_detections.xyxy[i].tolist()
+                                self.anchor_manager.add_anchor(
+                                    frame_num,
+                                    int(track_id),
+                                    player_name,
+                                    bbox,
+                                    team,
+                                    jersey_number
+                                )
+                            
+                            instances_tagged += 1
+                            break
+            
+            self.update_display()
+            self.update_detections_list(detections)
+            self.update_summary()
+            messagebox.showinfo("Tagged", 
+                              f"Tagged all instances of ID #{track_id} as '{player_name}'\n\n"
+                              f"Tagged {instances_tagged} frame(s)")
+    
+    def tag_all_instances_all_players(self, silent=False):
+        """Tag all instances of all track IDs that are currently tagged in this frame"""
+        detections = self.detection_manager.get_detections(self.viewer.current_frame_num)
+        if detections is None or len(detections) == 0:
+            if not silent:
+                messagebox.showwarning("Warning", "No detections in current frame")
+            return
+        
+        # Collect all tagged players in current frame
+        tagged_players = {}  # {track_id: (player_name, team, jersey_number)}
+        untagged_count = 0
+        
+        for i, track_id in enumerate(detections.tracker_id):
+            if track_id is None:
+                continue
+            
+            pid_str = str(int(track_id))
+            
+            if pid_str in self.viewer.approved_mappings:
+                mapping = self.viewer.approved_mappings[pid_str]
+                if isinstance(mapping, tuple):
+                    player_name = mapping[0]
+                    team = mapping[1] if len(mapping) > 1 else ""
+                    jersey_number = mapping[2] if len(mapping) > 2 else ""
+                else:
+                    player_name = mapping
+                    team = ""
+                    jersey_number = ""
+                tagged_players[track_id] = (player_name, team, jersey_number)
+            else:
+                untagged_count += 1
+        
+        if not tagged_players:
+            if not silent:
+                messagebox.showwarning("Warning", "No tagged players in current frame")
+            return
+        
+        if not silent:
+            response = messagebox.askyesno(
+                "Tag All Instances?",
+                f"Tag all instances of {len(tagged_players)} player(s) across all frames?\n\n"
+                f"This will tag all frames where these players appear.\n"
+                f"Continue?"
+            )
+            if not response:
+                return
+        
+        # Save state for undo
+        self._save_undo_state("tag_all_instances_all_players", {
+            'tagged_players': dict(tagged_players)
+        })
+        
+        # Tag all instances of each player
+        total_instances = 0
+        for track_id, (player_name, team, jersey_number) in tagged_players.items():
+            pid_str = str(int(track_id))
+            instances = 0
+            
+            for frame_num in range(self.video_manager.total_frames):
+                frame_detections = self.detection_manager.get_detections(frame_num)
+                if frame_detections is not None:
+                    for i, tid in enumerate(frame_detections.tracker_id):
+                        if tid is not None and int(tid) == int(track_id):
+                            # Tag this instance
+                            self.viewer.approved_mappings[pid_str] = (player_name, team, jersey_number)
+                            
+                            # Create anchor frame (only every 150 frames to avoid thousands)
+                            if frame_num % 150 == 0 and i < len(frame_detections.xyxy):
+                                bbox = frame_detections.xyxy[i].tolist()
+                                self.anchor_manager.add_anchor(
+                                    frame_num,
+                                    int(track_id),
+                                    player_name,
+                                    bbox,
+                                    team,
+                                    jersey_number
+                                )
+                            
+                            instances += 1
+                            total_instances += 1
+                            break
+        
+        if not silent:
+            self.update_display()
+            self.update_detections_list(detections)
+            self.update_summary()
+            messagebox.showinfo("Tagged", 
+                              f"Tagged all instances of {len(tagged_players)} player(s)\n\n"
+                              f"Total: {total_instances} frame(s) tagged")
+        else:
+            self.update_summary()
+    
+    def update_progress(self):
+        """Update tagging progress indicator"""
+        if not hasattr(self, 'progress_label') or not hasattr(self, 'progress_bar'):
+            return
+        
+        # Count total unique track IDs
+        total_tracks = set()
+        for frame_num in range(min(100, self.video_manager.total_frames)):  # Sample first 100 frames
+            detections = self.detection_manager.get_detections(frame_num)
+            if detections is not None:
+                for track_id in detections.tracker_id:
+                    if track_id is not None:
+                        total_tracks.add(int(track_id))
+        
+        if len(total_tracks) == 0:
+            self.progress_label.config(text="Progress: N/A")
+            self.progress_bar['value'] = 0
+            return
+        
+        # Count tagged tracks
+        tagged_tracks = set()
+        mappings = self.viewer.get_approved_mappings()
+        for pid_str in mappings.keys():
+            try:
+                tagged_tracks.add(int(pid_str))
+            except:
+                pass
+        
+        # Calculate percentage
+        if len(total_tracks) > 0:
+            percentage = (len(tagged_tracks) / len(total_tracks)) * 100
+            self.progress_label.config(text=f"Progress: {len(tagged_tracks)}/{len(total_tracks)} ({percentage:.0f}%)")
+            self.progress_bar['value'] = percentage
+        else:
+            self.progress_label.config(text="Progress: 0%")
+            self.progress_bar['value'] = 0
+    
+    def _save_undo_state(self, action_type, action_data):
+        """Save state for undo"""
+        self.undo_stack.append({
+            'type': action_type,
+            'data': action_data,
+            'mappings': dict(self.viewer.approved_mappings),
+            'frame': self.viewer.current_frame_num
+        })
+        
+        # Limit undo history
+        if len(self.undo_stack) > self.max_undo_history:
+            self.undo_stack.pop(0)
+        
+        # Clear redo stack when new action is performed
+        self.redo_stack = []
+    
+    def undo_action(self):
+        """Undo last tagging action"""
+        if not self.undo_stack:
+            messagebox.showinfo("Nothing to Undo", "No actions to undo")
+            return
+        
+        # Get last action
+        last_action = self.undo_stack.pop()
+        
+        # Save current state to redo stack
+        self.redo_stack.append({
+            'type': 'undo',
+            'mappings': dict(self.viewer.approved_mappings),
+            'frame': self.viewer.current_frame_num
+        })
+        
+        # Restore previous state
+        self.viewer.approved_mappings = last_action['mappings']
+        
+        # Restore frame if needed
+        if last_action.get('frame') != self.viewer.current_frame_num:
+            self.goto_frame(last_action['frame'])
+        
+        self.update_display()
+        self.update_detections_list(self.detection_manager.get_detections(self.viewer.current_frame_num))
+        self.update_summary()
+        self.status_label.config(text=f"✓ Undid: {last_action.get('type', 'action')}")
+    
+    def redo_action(self):
+        """Redo last undone action"""
+        if not self.redo_stack:
+            messagebox.showinfo("Nothing to Redo", "No actions to redo")
+            return
+        
+        # Get last redo action
+        last_redo = self.redo_stack.pop()
+        
+        # Save current state to undo stack
+        self.undo_stack.append({
+            'type': 'redo',
+            'mappings': dict(self.viewer.approved_mappings),
+            'frame': self.viewer.current_frame_num
+        })
+        
+        # Restore state
+        self.viewer.approved_mappings = last_redo['mappings']
+        
+        if last_redo.get('frame') != self.viewer.current_frame_num:
+            self.goto_frame(last_redo['frame'])
+        
+        self.update_display()
+        self.update_detections_list(self.detection_manager.get_detections(self.viewer.current_frame_num))
+        self.update_summary()
+        self.status_label.config(text="✓ Redid action")
+    
+    def validate_tag(self, player_name, team, jersey_number):
+        """Validate tag before applying"""
+        warnings = []
+        
+        # Check for duplicate player names with different track IDs
+        mappings = self.viewer.get_approved_mappings()
+        for pid_str, (existing_name, existing_team, existing_jersey) in mappings.items():
+            if existing_name == player_name and existing_name:  # Same name
+                # Check if it's a different track (potential duplicate)
+                if pid_str != str(self.selected_detection) if self.selected_detection is not None else True:
+                    # Check if team matches (might be same player on same team)
+                    if existing_team != team:
+                        warnings.append(f"Player '{player_name}' already tagged with different team ({existing_team} vs {team})")
+        
+        # Check for missing team (unless exempt)
+        coach_names = {"Kevin Hill", "Coach", "coach"}
+        is_coach = any(coach.lower() in player_name.lower() for coach in coach_names)
+        is_referee = "referee" in player_name.lower() or "ref" in player_name.lower()
+        is_other = player_name.lower() in ["other", "guest player", "guest", "unknown"]
+        
+        if not team and not (is_coach or is_referee or is_other):
+            warnings.append(f"Team not specified for '{player_name}'")
+        
+        # Check jersey number format
+        if jersey_number and not jersey_number.isdigit():
+            warnings.append(f"Jersey number '{jersey_number}' is not a valid number")
+        
+        return warnings
     
     def cleanup(self):
         # Save gallery
