@@ -30,16 +30,11 @@ from .core import (
     GalleryManager, CSVManager, AnchorFrameManager
 )
 
-# Import modes
-try:
-    from .modes.setup_mode import SetupMode
-    from .modes.playback_mode import PlaybackMode
-    from .modes.gallery_mode import GalleryMode
-except ImportError as e:
-    print(f"Warning: Could not import modes: {e}")
-    SetupMode = None
-    PlaybackMode = None
-    GalleryMode = None
+# Import modes - defer until after BaseMode is defined
+# We'll import them in switch_mode to avoid circular dependency
+SetupMode = None
+PlaybackMode = None
+GalleryMode = None
 
 
 class UnifiedViewer:
@@ -149,45 +144,65 @@ class UnifiedViewer:
         self.root.title(f"Unified Player Viewer - {self.MODES[mode]}")
         self.mode_var.set(mode)
         
+        # Try to import modes if not already imported
+        global SetupMode, PlaybackMode, GalleryMode
+        if SetupMode is None or PlaybackMode is None or GalleryMode is None:
+            try:
+                from .modes.setup_mode import SetupMode
+                from .modes.playback_mode import PlaybackMode
+                from .modes.gallery_mode import GalleryMode
+            except ImportError as e:
+                import traceback
+                error_msg = f"Could not import viewer modes: {e}\n\n{traceback.format_exc()}"
+                print(f"Error: {error_msg}")
+                ttk.Label(self.content_frame, 
+                         text=f"Error loading {mode} mode:\n\n{str(e)}\n\nPlease check console for details.",
+                         font=('Arial', 12), foreground='red', justify=tk.LEFT).pack(expand=True, padx=20, pady=20)
+                self.current_mode_instance = None
+                return
+        
         # Initialize new mode
-        if mode == 'setup' and SetupMode:
-            self.current_mode_instance = SetupMode(
-                self.content_frame, 
-                self,
-                self.video_manager,
-                self.detection_manager,
-                self.reid_manager,
-                self.gallery_manager,
-                self.csv_manager,
-                self.anchor_manager
-            )
-        elif mode == 'playback' and PlaybackMode:
-            self.current_mode_instance = PlaybackMode(
-                self.content_frame,
-                self,
-                self.video_manager,
-                self.detection_manager,
-                self.reid_manager,
-                self.gallery_manager,
-                self.csv_manager,
-                self.anchor_manager
-            )
-        elif mode == 'gallery' and GalleryMode:
-            self.current_mode_instance = GalleryMode(
-                self.content_frame,
-                self,
-                self.video_manager,
-                self.detection_manager,
-                self.reid_manager,
-                self.gallery_manager,
-                self.csv_manager,
-                self.anchor_manager
-            )
-        else:
-            # Fallback: show message that mode is not yet implemented
+        try:
+            if mode == 'setup':
+                self.current_mode_instance = SetupMode(
+                    self.content_frame, 
+                    self,
+                    self.video_manager,
+                    self.detection_manager,
+                    self.reid_manager,
+                    self.gallery_manager,
+                    self.csv_manager,
+                    self.anchor_manager
+                )
+            elif mode == 'playback':
+                self.current_mode_instance = PlaybackMode(
+                    self.content_frame,
+                    self,
+                    self.video_manager,
+                    self.detection_manager,
+                    self.reid_manager,
+                    self.gallery_manager,
+                    self.csv_manager,
+                    self.anchor_manager
+                )
+            elif mode == 'gallery':
+                self.current_mode_instance = GalleryMode(
+                    self.content_frame,
+                    self,
+                    self.video_manager,
+                    self.detection_manager,
+                    self.reid_manager,
+                    self.gallery_manager,
+                    self.csv_manager,
+                    self.anchor_manager
+                )
+        except Exception as e:
+            import traceback
+            error_msg = f"Error initializing {mode} mode: {e}\n\n{traceback.format_exc()}"
+            print(f"Error: {error_msg}")
             ttk.Label(self.content_frame, 
-                     text=f"Mode '{mode}' is being implemented.\nUsing legacy viewer for now.",
-                     font=('Arial', 14)).pack(expand=True)
+                     text=f"Error initializing {mode} mode:\n\n{str(e)}\n\nPlease check console for details.",
+                     font=('Arial', 12), foreground='red', justify=tk.LEFT).pack(expand=True, padx=20, pady=20)
             self.current_mode_instance = None
     
     def on_mode_changed(self, event=None):

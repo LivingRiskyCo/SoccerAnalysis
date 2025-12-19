@@ -434,20 +434,20 @@ class GalleryMode(BaseMode):
                     
                     # Try to match with gallery
                     if self.reid_manager.is_initialized() and self.gallery_manager.is_initialized():
-                    # Extract features
-                    try:
-                        if SUPERVISION_AVAILABLE and self.reid_manager.is_initialized():
-                            xyxy = np.array([[x1, y1, x2, y2]], dtype=np.float32)
-                            detections = sv.Detections(xyxy=xyxy)
-                # Use reid_manager's extract_features method
-                self.reid_manager.extract_features(frame, detections, self.viewer.current_frame_num)
-                # Get features from manager (use first track_id from detections)
-                temp_track_id = detections.tracker_id[0] if len(detections.tracker_id) > 0 else 0
-                feature_vector = self.reid_manager.get_features(self.viewer.current_frame_num, temp_track_id)
-                
-                if feature_vector is not None:
-                    # Match to gallery
-                    match_result = self.gallery_manager.match_player(features=feature_vector)
+                        # Extract features
+                        try:
+                            if SUPERVISION_AVAILABLE and self.reid_manager.is_initialized():
+                                xyxy = np.array([[x1, y1, x2, y2]], dtype=np.float32)
+                                detections = sv.Detections(xyxy=xyxy)
+                                # Use reid_manager's extract_features method
+                                self.reid_manager.extract_features(frame, detections, self.viewer.current_frame_num)
+                                # Get features from manager (use first track_id from detections)
+                                temp_track_id = detections.tracker_id[0] if len(detections.tracker_id) > 0 else 0
+                                feature_vector = self.reid_manager.get_features(self.viewer.current_frame_num, temp_track_id)
+                                
+                                if feature_vector is not None:
+                                    # Match to gallery
+                                    match_result = self.gallery_manager.match_player(features=feature_vector)
                                     if match_result:
                                         player_name, confidence, _ = match_result
                                         if confidence >= 0.5:
