@@ -1311,7 +1311,7 @@ class PlaybackMode(BaseMode):
     
     def update_heatmap_player_dropdown(self):
         """Update heatmap player dropdown with available players"""
-        if not hasattr(self, 'heatmap_player_combo'):
+        if self.heatmap_player_combo is None:
             return
         
         if not self.csv_manager.is_loaded():
