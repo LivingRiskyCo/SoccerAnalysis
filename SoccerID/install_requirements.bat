@@ -1,7 +1,8 @@
 @echo off
-REM Install all required packages (system Python or virtual environment)
+REM Install all required packages from parent directory
 echo Installing required packages...
 cd /d "%~dp0"
+cd ..
 
 REM Check if virtual environment exists
 if exist "env\Scripts\activate.bat" (
@@ -18,7 +19,7 @@ echo Installing packages from requirements.txt...
 if exist "requirements.txt" (
     pip install -r requirements.txt
 ) else (
-    echo ERROR: requirements.txt not found in current directory.
+    echo ERROR: requirements.txt not found in parent directory.
     echo Current directory: %CD%
     pause
     exit /b 1
