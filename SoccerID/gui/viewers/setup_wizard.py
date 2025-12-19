@@ -378,12 +378,17 @@ class SetupWizard:
         return result
     
     def load_csv_data(self, csv_path):
-        """Load CSV tracking data if available"""
+        """Load CSV tracking data if available and extract player assignments"""
         try:
             if csv_path and os.path.exists(csv_path):
-                self.csv_data = pd.read_csv(csv_path)
+                # Skip comment lines (starting with '#') - these contain metadata
+                self.csv_data = pd.read_csv(csv_path, comment='#')
                 self.csv_path = csv_path  # Store the path
                 print(f"✓ Loaded CSV data: {len(self.csv_data)} rows from {os.path.basename(csv_path)}")
+                
+                # Extract player assignments from CSV (like playback viewer does)
+                self._extract_player_assignments_from_csv()
+                
                 # Update CSV file label
                 if hasattr(self, 'csv_file_label'):
                     self.csv_file_label.config(text=f"CSV: {os.path.basename(csv_path)}")
@@ -391,6 +396,82 @@ class SetupWizard:
             print(f"⚠ Could not load CSV data: {e}")
             if hasattr(self, 'csv_file_label'):
                 self.csv_file_label.config(text="CSV: Error loading file")
+    
+    def _extract_player_assignments_from_csv(self):
+        """Extract player_name assignments from CSV and populate approved_mappings"""
+        if self.csv_data is None or self.csv_data.empty:
+            return
+        
+        try:
+            # Check if CSV has required columns
+            if 'player_id' not in self.csv_data.columns:
+                return
+            
+            # Get unique player_id -> player_name mappings from CSV
+            # Use the most common player_name for each player_id (in case of inconsistencies)
+            player_assignments = {}  # player_id -> (player_name, team, jersey_number)
+            
+            # Filter valid rows (non-NaN player_id and player_name)
+            valid_mask = (
+                self.csv_data['player_id'].notna() &
+                ('player_name' in self.csv_data.columns) &
+                (self.csv_data['player_name'].notna())
+            )
+            valid_df = self.csv_data[valid_mask].copy()
+            
+            if len(valid_df) > 0:
+                # Group by player_id and get the most common player_name for each
+                for player_id, group in valid_df.groupby('player_id'):
+                    # Get most common player_name (mode)
+                    player_names = group['player_name'].astype(str).str.strip()
+                    player_names = player_names[player_names != 'nan']
+                    player_names = player_names[player_names.lower() != 'none']
+                    
+                    if len(player_names) > 0:
+                        # Get most frequent player_name
+                        most_common_name = player_names.mode()
+                        if len(most_common_name) > 0:
+                            player_name = most_common_name.iloc[0]
+                            
+                            # Get team (most common)
+                            team = ""
+                            if 'team' in group.columns:
+                                teams = group['team'].astype(str).str.strip()
+                                teams = teams[teams != 'nan']
+                                if len(teams) > 0:
+                                    most_common_team = teams.mode()
+                                    if len(most_common_team) > 0:
+                                        team = most_common_team.iloc[0]
+                            
+                            # Get jersey_number (most common)
+                            jersey_number = ""
+                            if 'jersey_number' in group.columns:
+                                jerseys = group['jersey_number'].astype(str).str.strip()
+                                jerseys = jerseys[jerseys != 'nan']
+                                if len(jerseys) > 0:
+                                    most_common_jersey = jerseys.mode()
+                                    if len(most_common_jersey) > 0:
+                                        jersey_number = most_common_jersey.iloc[0]
+                            
+                            # Store assignment
+                            player_id_str = str(int(player_id))
+                            player_assignments[player_id_str] = (player_name, team, jersey_number)
+                
+                # Populate approved_mappings from CSV assignments
+                csv_mappings_count = 0
+                for pid_str, (player_name, team, jersey_number) in player_assignments.items():
+                    # Only add if not already in approved_mappings (don't overwrite manual tags)
+                    if pid_str not in self.approved_mappings:
+                        self.approved_mappings[pid_str] = (player_name, team, jersey_number)
+                        csv_mappings_count += 1
+                
+                if csv_mappings_count > 0:
+                    print(f"✓ Loaded {csv_mappings_count} player assignments from CSV")
+                    print(f"  → CSV assignments will be used for player identification")
+        except Exception as e:
+            print(f"⚠ Could not extract player assignments from CSV: {e}")
+            import traceback
+            traceback.print_exc()
     
     def load_csv_file(self):
         """Load CSV file manually"""
@@ -2561,7 +2642,13 @@ Home/End: First/Last frame"""
             # This ensures we have player mappings and Re-ID information available during initialization
             self.auto_load_seed_data()
             
+            # CRITICAL: Extract player assignments from CSV if loaded (like playback viewer does)
+            # This should happen BEFORE anchor frames so CSV assignments take precedence
+            if self.csv_data is not None and not self.csv_data.empty:
+                self._extract_player_assignments_from_csv()
+            
             # Load anchor frames and populate approved_mappings BEFORE Re-ID matching
+            # Note: CSV assignments are loaded first, so anchor frames won't overwrite CSV data
             if hasattr(self, 'anchor_frames') and self.anchor_frames:
                 print(f"✓ Loading {len(self.anchor_frames)} anchor frames to pre-populate player mappings")
                 for frame_num, anchors in self.anchor_frames.items():
@@ -2576,6 +2663,7 @@ Home/End: First/Last frame"""
                         if track_id is not None and player_name:
                             tid_str = str(int(track_id))
                             # Pre-populate approved_mappings with anchor frame data
+                            # Only if not already set by CSV (CSV takes precedence)
                             if tid_str not in self.approved_mappings:
                                 self.approved_mappings[tid_str] = (player_name, team, jersey_number)
                                 print(f"  → Anchor frame {frame_key}: Track #{track_id} → '{player_name}'")
@@ -2879,6 +2967,11 @@ Home/End: First/Last frame"""
             else:
                 self.current_detections = None
         
+        # CRITICAL: Use CSV data to populate player assignments for this frame (like playback viewer)
+        # This should happen BEFORE Re-ID matching so CSV assignments take precedence
+        if self.csv_data is not None and not self.csv_data.empty and self.current_detections is not None:
+            self._apply_csv_assignments_to_frame(self.current_frame_num)
+        
         # Try to match manual detections with YOLO detections in this frame
         self.match_manual_detections()
         
@@ -2888,6 +2981,7 @@ Home/End: First/Last frame"""
             self.extract_reid_features_for_frame(frame)
             
             # Match detections to gallery players using Re-ID
+            # Note: CSV assignments are already applied, so this won't overwrite them
             self.match_detections_to_gallery(frame)
             
             # Use Re-ID and position to maintain player identity when track IDs change
