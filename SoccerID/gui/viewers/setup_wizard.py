@@ -2527,23 +2527,29 @@ Home/End: First/Last frame"""
         # Declare global at the start of the function before using it
         global YOLO_AVAILABLE, SUPERVISION_AVAILABLE
         
-        if not YOLO_AVAILABLE:
-            # Try to import again with more detailed error message
-            try:
+        # Ensure YOLO is imported - try module level first, then import if needed
+        try:
+            # Try to use the module-level import if available
+            if YOLO_AVAILABLE:
+                # YOLO should already be imported at module level
+                from ultralytics import YOLO
+                import supervision as sv
+            else:
+                # Try to import again with more detailed error message
                 from ultralytics import YOLO
                 import supervision as sv
                 # If we get here, YOLO is actually available - update the flag
                 YOLO_AVAILABLE = True
                 SUPERVISION_AVAILABLE = True
-                print("✓ YOLO and supervision successfully imported")
-            except ImportError as e:
-                error_msg = f"YOLO not available. Please install ultralytics.\n\nError: {e}\n\nTry: pip install ultralytics supervision"
-                messagebox.showerror("Error", error_msg)
-                return
-            except Exception as e:
-                error_msg = f"YOLO import failed: {e}\n\nTry: pip install ultralytics supervision"
-                messagebox.showerror("Error", error_msg)
-                return
+                print("✓ YOLO and supervision successfully imported at runtime")
+        except ImportError as e:
+            error_msg = f"YOLO not available. Please install ultralytics.\n\nError: {e}\n\nTry: pip install ultralytics supervision"
+            messagebox.showerror("Error", error_msg)
+            return
+        except Exception as e:
+            error_msg = f"YOLO import failed: {e}\n\nTry: pip install ultralytics supervision"
+            messagebox.showerror("Error", error_msg)
+            return
         
         # Disable button during initialization
         self.init_button.config(state=tk.DISABLED)
