@@ -4765,7 +4765,11 @@ Home/End: First/Last frame"""
                     if not hasattr(self, 'gallery_suggestions'):
                         self.gallery_suggestions = {}  # track_id -> (player_name, confidence)
                     self.gallery_suggestions[track_id] = (player_name, best_match_score)
-                    print(f"💡 Gallery suggests Track #{track_id} → '{player_name}' (confidence: {best_match_score:.2f})")
+                    # Only show gallery suggestions in debug mode to reduce spam
+                    import os
+                    debug_mode = os.getenv('SOCCER_ANALYSIS_DEBUG', '0') == '1'
+                    if debug_mode:
+                        print(f"💡 Gallery suggests Track #{track_id} → '{player_name}' (confidence: {best_match_score:.2f})")
     
     def match_players_with_reid(self, frame):
         """
