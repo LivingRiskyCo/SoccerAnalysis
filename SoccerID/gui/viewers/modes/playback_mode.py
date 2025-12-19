@@ -192,15 +192,6 @@ class PlaybackMode(BaseMode):
         self.pan_start_x = 0
         self.pan_start_y = 0
         
-        # Window controls (needed in create_ui)
-        self.is_maximized = False
-        self.is_fullscreen = False
-        
-        # Window controls
-        self.always_on_top = tk.BooleanVar(value=False)
-        self.is_maximized = False
-        self.is_fullscreen = False
-        
         # Ball trail
         self.show_ball_trail = tk.BooleanVar(value=True)
         self.ball_trail = []  # List of recent ball positions
