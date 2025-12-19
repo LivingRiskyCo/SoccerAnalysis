@@ -1824,9 +1824,12 @@ class PlaybackMode(BaseMode):
             self.event_timeline_viewer = EventTimelineViewer(
                 parent=self.viewer.root,
                 event_tracker=self.event_tracker,
+                video_path=self.video_manager.video_path,
                 total_frames=self.video_manager.total_frames,
                 fps=self.video_manager.fps,
-                jump_callback=jump_to_frame
+                jump_callback=jump_to_frame,
+                gallery_manager=self.gallery_manager,
+                overlay_renderer=self.hd_renderer
             )
             
         except Exception as e:

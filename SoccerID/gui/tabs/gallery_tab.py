@@ -91,6 +91,8 @@ class GalleryTab:
                       command=lambda: self._call_parent_method('_add_new_player_to_gallery', self.parent_frame), width=18).pack(side=tk.LEFT, padx=5)
             ttk.Button(button_frame, text="📸 Tag New Players", 
                       command=lambda: self._call_parent_method('open_player_gallery_seeder'), width=18).pack(side=tk.LEFT, padx=5)
+            ttk.Button(button_frame, text="🎬 View Highlight Clips", 
+                      command=self._open_highlight_clips_viewer, width=20).pack(side=tk.LEFT, padx=5)
             ttk.Button(button_frame, text="🔧 Backfill Features", 
                       command=lambda: self._call_parent_method('backfill_gallery_features'), width=18).pack(side=tk.LEFT, padx=5)
             ttk.Button(button_frame, text="🔍 Match Unnamed Anchors", 
@@ -242,4 +244,45 @@ To add players: Click 'Tag New Players' button above
             messagebox.showwarning("Method Not Found", 
                                  f"Method '{method_name}' not found in parent GUI.\n"
                                  "This is a migration issue - please report it.")
+    
+    def _open_highlight_clips_viewer(self):
+        """Open highlight clips viewer"""
+        try:
+            # Try to import clip manager and player clips viewer
+            try:
+                from SoccerID.utils.clip_manager import ClipManager
+                from SoccerID.gui.viewers.player_clips_viewer import PlayerClipsViewer
+            except ImportError:
+                try:
+                    from clip_manager import ClipManager
+                    from player_clips_viewer import PlayerClipsViewer
+                except ImportError:
+                    messagebox.showwarning("Not Available", "Clip manager or player clips viewer not available")
+                    return
+            
+            # Get gallery manager from parent GUI
+            gallery_manager = None
+            if hasattr(self.parent_gui, 'gallery_manager'):
+                gallery_manager = self.parent_gui.gallery_manager
+            elif hasattr(self.parent_gui, 'player_gallery'):
+                gallery_manager = self.parent_gui.player_gallery
+            
+            if not gallery_manager:
+                # Try to create gallery manager
+                try:
+                    gallery_manager = PlayerGallery()
+                except:
+                    messagebox.showerror("Error", "Could not access player gallery")
+                    return
+            
+            # Create clip manager
+            clip_manager = ClipManager()
+            
+            # Open clips viewer
+            clips_viewer = PlayerClipsViewer(self.parent_frame.winfo_toplevel(), 
+                                            gallery_manager, clip_manager)
+        except Exception as e:
+            messagebox.showerror("Error", f"Could not open highlight clips viewer: {e}")
+            import traceback
+            traceback.print_exc()
 

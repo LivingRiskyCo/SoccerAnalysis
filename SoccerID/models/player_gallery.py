@@ -100,6 +100,9 @@ class PlayerProfile:
     foot_reference_frames: Optional[List[Dict]] = None  # List of foot region reference frames
     shoe_color: Optional[List[int]] = None  # Dominant shoe color in HSV [H, S, V]
     
+    # HIGHLIGHT CLIPS: Video clips of player events
+    highlight_clips: Optional[List[Dict]] = None  # List of clip references {clip_id, event_type, clip_path, thumbnail_path, etc.}
+    
     # HIGHEST QUALITY IMAGES: Best images for each body part (stored as base64 or file paths)
     # These are used for Re-ID features and verification
     best_body_image: Optional[Dict] = None  # {image_data: base64 or path, frame_num: int, bbox: list, quality: float, confidence: float, video_path: str}
