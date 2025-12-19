@@ -135,6 +135,7 @@ class PlaybackMode(BaseMode):
         self.buffer_status_label = None
         self.play_button = None
         self.canvas = None
+        self.heatmap_player_combo = None  # Will be created in _create_analytics_tab
         
         # Window controls (needed in create_ui)
         self.always_on_top = tk.BooleanVar(value=False)
