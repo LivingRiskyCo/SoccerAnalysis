@@ -39,10 +39,7 @@ class SetupMode(BaseMode):
     
     def __init__(self, parent_frame, viewer, video_manager, detection_manager, 
                  reid_manager, gallery_manager, csv_manager, anchor_manager):
-        # Initialize base
-        super().__init__(parent_frame, viewer, video_manager, detection_manager,
-                        reid_manager, gallery_manager, csv_manager, anchor_manager)
-        
+        # Initialize attributes BEFORE calling super (which calls create_ui)
         # State
         self.selected_detection = None
         self.current_frame = None
@@ -76,9 +73,17 @@ class SetupMode(BaseMode):
         # Detection history for navigation
         self.detections_history = {}  # frame_num -> detections
         
-        # Load player names and team colors
+        # Now call super (which will call create_ui)
+        super().__init__(parent_frame, viewer, video_manager, detection_manager,
+                        reid_manager, gallery_manager, csv_manager, anchor_manager)
+        
+        # Load player names and team colors (after UI is created)
         self.load_player_name_list()
         self.load_team_colors()
+        
+        # Update quick tag dropdown with loaded player names
+        if hasattr(self, 'quick_tag_player_combo'):
+            self.update_quick_tag_dropdown()
         
         # Initialize jersey OCR
         if JERSEY_OCR_AVAILABLE:
@@ -140,7 +145,9 @@ class SetupMode(BaseMode):
         
         ttk.Label(quick_tag_inner, text="Player:").pack(side=tk.LEFT, padx=2)
         self.quick_tag_player_var = tk.StringVar()
-        active_players = [name for name in self.player_name_list if self.is_player_active(name)]
+        # player_name_list might not be loaded yet, use empty list as default
+        active_players = [name for name in (self.player_name_list if hasattr(self, 'player_name_list') and self.player_name_list else []) 
+                         if hasattr(self, 'is_player_active') and self.is_player_active(name)]
         self.quick_tag_player_combo = ttk.Combobox(quick_tag_inner, textvariable=self.quick_tag_player_var,
                                                   width=18, values=active_players, state="readonly")
         self.quick_tag_player_combo.pack(side=tk.LEFT, padx=2)
