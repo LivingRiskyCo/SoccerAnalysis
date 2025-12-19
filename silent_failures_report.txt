@@ -1,0 +1,392 @@
+Silent Failures Report
+================================================================================
+Total issues found: 129
+================================================================================
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 1289: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 2082: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 2224: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 2241: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 2259: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 3269: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 3292: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 4536: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 4686: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 4729: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 4749: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 4795: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 4831: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 4994: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 5033: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 5069: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 5129: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 5930: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 6681: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 6764: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 6793: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 7180: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 7976: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 8016: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 8055: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 8057: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 8083: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 8144: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 8486: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 9097: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 10643: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 10983: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 10991: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 11275: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 11604: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 11610: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 12471: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 12865: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 13619: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 15055: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 15394: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 15396: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 15706: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 15928: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 16120: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 16410: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 16486: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 16616: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 16648: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 18203: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 18349: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 18459: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 19158: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 19266: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 19567: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 19583: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 19634: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 19650: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 19819: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 19858: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 19895: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 21263: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 21337: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 21341: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 21363: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 21670: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 21731: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 22593: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 22609: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 22687: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 22701: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\player_gallery.py
+  Line 1201: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\soccer_analysis_gui.py
+  Line 1882: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\soccer_analysis_gui.py
+  Line 3213: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\soccer_analysis_gui.py
+  Line 3276: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\soccer_analysis_gui.py
+  Line 3310: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\soccer_analysis_gui.py
+  Line 3389: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\soccer_analysis_gui.py
+  Line 3762: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\soccer_analysis_gui.py
+  Line 3799: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\soccer_analysis_gui.py
+  Line 4601: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\soccer_analysis_gui.py
+  Line 4612: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\soccer_analysis_gui.py
+  Line 6800: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\soccer_analysis_gui.py
+  Line 6887: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\soccer_analysis_gui.py
+  Line 6972: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\soccer_analysis_gui.py
+  Line 7042: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\soccer_analysis_gui.py
+  Line 7084: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\soccer_analysis_gui.py
+  Line 7263: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\soccer_analysis_gui.py
+  Line 7483: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\soccer_analysis_gui.py
+  Line 7592: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\soccer_analysis_gui.py
+  Line 7671: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\soccer_analysis_gui.py
+  Line 9008: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\soccer_analysis_gui.py
+  Line 9463: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\soccer_analysis_gui.py
+  Line 10673: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\soccer_analysis_gui.py
+  Line 10764: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\soccer_analysis_gui.py
+  Line 10774: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\soccer_analysis_gui.py
+  Line 10883: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\setup_wizard.py
+  Line 1577: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\setup_wizard.py
+  Line 2173: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\setup_wizard.py
+  Line 3660: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\setup_wizard.py
+  Line 4160: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\setup_wizard.py
+  Line 4753: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\setup_wizard.py
+  Line 4794: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\setup_wizard.py
+  Line 6608: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\playback_viewer.py
+  Line 56: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\playback_viewer.py
+  Line 367: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\playback_viewer.py
+  Line 537: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\playback_viewer.py
+  Line 543: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\playback_viewer.py
+  Line 587: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\playback_viewer.py
+  Line 593: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\playback_viewer.py
+  Line 640: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\playback_viewer.py
+  Line 646: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\playback_viewer.py
+  Line 760: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\playback_viewer.py
+  Line 1534: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\playback_viewer.py
+  Line 1542: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\playback_viewer.py
+  Line 1573: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\playback_viewer.py
+  Line 1585: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\playback_viewer.py
+  Line 1619: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\playback_viewer.py
+  Line 1699: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\playback_viewer.py
+  Line 2014: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\playback_viewer.py
+  Line 2016: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\playback_viewer.py
+  Line 2155: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\playback_viewer.py
+  Line 2165: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\playback_viewer.py
+  Line 2391: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\playback_viewer.py
+  Line 2411: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\playback_viewer.py
+  Line 2575: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\playback_viewer.py
+  Line 4964: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\playback_viewer.py
+  Line 6307: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\playback_viewer.py
+  Line 6331: Bare except clause - catches all exceptions including SystemExit
+
+File: C:\Users\nerdw\soccer_analysis\playback_viewer.py
+  Line 6540: Bare except clause - catches all exceptions including SystemExit
+

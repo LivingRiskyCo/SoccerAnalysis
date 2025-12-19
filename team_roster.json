@@ -1,0 +1,104 @@
+{
+  "['Cameron Hill', 'Blue', '']": {
+    "jersey_number": null,
+    "team": null,
+    "position": null,
+    "active": false
+  },
+  "Ellie Hill": {
+    "jersey_number": "C",
+    "team": "Coach",
+    "position": null,
+    "active": true
+  },
+  "James Carlson": {
+    "jersey_number": "2",
+    "team": "Blue",
+    "position": null,
+    "active": false
+  },
+  "['James Carlson', 'Blue', '']": {
+    "jersey_number": null,
+    "team": "Unknown",
+    "position": null,
+    "active": false
+  },
+  "Cameron Hill": {
+    "jersey_number": "10",
+    "team": "Blue",
+    "position": null,
+    "active": true
+  },
+  "['Rocco Piazza', '', '']": {
+    "jersey_number": null,
+    "team": "Unknown",
+    "position": null,
+    "active": false
+  },
+  "['Cameron Hill', '', '']": {
+    "jersey_number": null,
+    "team": null,
+    "position": null,
+    "active": false
+  },
+  "Rocco Piazza": {
+    "jersey_number": "6",
+    "team": "Blue",
+    "position": null,
+    "active": false
+  },
+  "Kevin Hill": {
+    "jersey_number": "C",
+    "team": "Coach",
+    "position": null,
+    "active": false
+  },
+  "Wesley Beckett": {
+    "jersey_number": "9",
+    "team": "Gray",
+    "position": null,
+    "active": true
+  },
+  "Anay Rao": {
+    "jersey_number": "4",
+    "team": "Gray",
+    "position": null,
+    "active": true
+  },
+  "Gunnar Nesbitt": {
+    "jersey_number": "5",
+    "team": "Blue",
+    "position": null,
+    "active": false
+  },
+  "Jax Derryberry": {
+    "jersey_number": "3",
+    "team": "Unknown",
+    "position": null,
+    "active": true
+  },
+  "Merritt Jones": {
+    "jersey_number": "23",
+    "team": "Gray",
+    "position": null,
+    "active": false
+  },
+  "Taki Guest": {
+    "jersey_number": "99",
+    "team": "Blue",
+    "position": null,
+    "active": false
+  },
+  "Yusuf Cankara": {
+    "jersey_number": "7",
+    "team": "Gray",
+    "position": null,
+    "active": false
+  },
+  "Cameron Melnik": {
+    "jersey_number": "28",
+    "team": "Team 1",
+    "position": null,
+    "active": false
+  }
+}

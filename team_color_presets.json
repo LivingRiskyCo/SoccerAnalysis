@@ -1,0 +1,300 @@
+{
+  "Blue-Gray": {
+    "team1_name": "Blue",
+    "team2_name": "Gray",
+    "team_colors": {
+      "team1": {
+        "name": "Team 1",
+        "hsv_ranges": {
+          "lower": [
+            101,
+            138,
+            43
+          ],
+          "upper": [
+            131,
+            255,
+            255
+          ]
+        }
+      },
+      "team2": {
+        "name": "Team 2",
+        "hsv_ranges": {
+          "lower": [
+            85,
+            30,
+            83
+          ],
+          "upper": [
+            115,
+            255,
+            255
+          ]
+        }
+      }
+    }
+  },
+  "practice 11-4-v2": {
+    "team1_name": "Blue",
+    "team2_name": "Gray",
+    "team_colors": {
+      "team1": {
+        "name": "Team 1",
+        "hsv_ranges": {
+          "lower": [
+            98,
+            118,
+            76
+          ],
+          "upper": [
+            128,
+            255,
+            255
+          ]
+        }
+      },
+      "team2": {
+        "name": "Team 2",
+        "hsv_ranges": {
+          "lower": [
+            91,
+            30,
+            80
+          ],
+          "upper": [
+            121,
+            255,
+            255
+          ]
+        }
+      }
+    }
+  },
+  "Blue/Gray": {
+    "team1_name": "Blue",
+    "team2_name": "Gray",
+    "team_colors": {
+      "team1": {
+        "name": "Team 1",
+        "hsv_ranges": {
+          "lower": [
+            100,
+            116,
+            75
+          ],
+          "upper": [
+            130,
+            255,
+            255
+          ]
+        }
+      },
+      "team2": {
+        "name": "Team 2",
+        "hsv_ranges": {
+          "lower": [
+            65,
+            30,
+            83
+          ],
+          "upper": [
+            95,
+            255,
+            255
+          ]
+        }
+      }
+    }
+  },
+  "Gray-Blue": {
+    "team1_name": "Gray",
+    "team2_name": "Blue",
+    "team_colors": {
+      "team1": {
+        "name": "Team 1",
+        "hsv_ranges": {
+          "lower": [
+            115,
+            30,
+            93
+          ],
+          "upper": [
+            145,
+            255,
+            255
+          ]
+        }
+      },
+      "team2": {
+        "name": "Team 2",
+        "hsv_ranges": {
+          "lower": [
+            98,
+            109,
+            61
+          ],
+          "upper": [
+            128,
+            255,
+            255
+          ]
+        }
+      }
+    }
+  },
+  "Gray-Team1 - Blue - Team 2": {
+    "team1_name": "Gray",
+    "team2_name": "Blue",
+    "team_colors": {
+      "team1": {
+        "name": "Gray",
+        "hsv_ranges": {
+          "lower": [
+            120,
+            0,
+            121
+          ],
+          "upper": [
+            140,
+            255,
+            255
+          ]
+        }
+      },
+      "team2": {
+        "name": "Blue",
+        "hsv_ranges": {
+          "lower": [
+            103,
+            121,
+            78
+          ],
+          "upper": [
+            123,
+            255,
+            255
+          ]
+        }
+      }
+    }
+  },
+  "Gray-Team1-Blue-Team2": {
+    "team1_name": "Gray",
+    "team2_name": "Blue",
+    "team_colors": {
+      "team1": {
+        "name": "Gray",
+        "hsv_ranges": {
+          "lower": [
+            103,
+            0,
+            109
+          ],
+          "upper": [
+            123,
+            255,
+            255
+          ]
+        }
+      },
+      "team2": {
+        "name": "Blue",
+        "hsv_ranges": {
+          "lower": [
+            102,
+            104,
+            75
+          ],
+          "upper": [
+            122,
+            255,
+            255
+          ]
+        }
+      }
+    }
+  },
+  "1-minute": {
+    "team1_name": "Gray",
+    "team2_name": "Blue",
+    "team_colors": {
+      "team1": {
+        "name": "Gray",
+        "hsv_ranges": {
+          "lower1": [
+            0,
+            0,
+            95
+          ],
+          "upper1": [
+            10,
+            255,
+            255
+          ],
+          "lower2": [
+            170,
+            0,
+            95
+          ],
+          "upper2": [
+            180,
+            255,
+            255
+          ]
+        }
+      },
+      "team2": {
+        "name": "Blue",
+        "hsv_ranges": {
+          "lower": [
+            105,
+            107,
+            48
+          ],
+          "upper": [
+            125,
+            255,
+            255
+          ]
+        }
+      }
+    }
+  },
+  "Gray -1 - Blue - 2": {
+    "team1_name": "Gray",
+    "team2_name": "Blue",
+    "team_colors": {
+      "team1": {
+        "name": "Gray",
+        "hsv_ranges": {
+          "lower": [
+            103,
+            0,
+            109
+          ],
+          "upper": [
+            123,
+            255,
+            255
+          ]
+        }
+      },
+      "team2": {
+        "name": "Blue",
+        "hsv_ranges": {
+          "lower": [
+            102,
+            104,
+            75
+          ],
+          "upper": [
+            122,
+            255,
+            255
+          ]
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,32 @@
+{
+    "color1": {
+        "name": "White",
+        "hsv_ranges": {
+            "lower": [
+                115,
+                1,
+                152
+            ],
+            "upper": [
+                135,
+                255,
+                255
+            ]
+        }
+    },
+    "color2": {
+        "name": "Red",
+        "hsv_ranges": {
+            "lower": [
+                146,
+                0,
+                210
+            ],
+            "upper": [
+                166,
+                255,
+                255
+            ]
+        }
+    }
+}

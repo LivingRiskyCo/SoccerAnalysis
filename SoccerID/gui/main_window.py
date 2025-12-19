@@ -2095,6 +2095,11 @@ Playback Viewer:
     
     def open_playback_viewer(self):
         """Open playback viewer"""
+        # Use unified viewer in playback mode
+        self.open_unified_viewer(mode='playback')
+    
+    def _open_legacy_playback_viewer(self):
+        """Fallback to legacy playback viewer"""
         try:
             # Try new structure imports first
             try:
@@ -2115,6 +2120,57 @@ Playback Viewer:
     
     def open_setup_wizard(self):
         """Open interactive setup wizard for player tagging"""
+        # Use unified viewer in setup mode
+        self.open_unified_viewer(mode='setup')
+    
+    def open_unified_viewer(self, mode='setup', video_path=None, csv_path=None):
+        """Open unified viewer with specified mode"""
+        try:
+            from .viewers.unified_viewer import UnifiedViewer
+        except ImportError:
+            try:
+                from SoccerID.gui.viewers.unified_viewer import UnifiedViewer
+            except ImportError:
+                # Fallback to legacy viewers
+                if mode == 'setup':
+                    self._open_legacy_setup_wizard()
+                elif mode == 'playback':
+                    self.open_playback_viewer()
+                else:
+                    messagebox.showerror("Error", f"Mode '{mode}' not available in legacy mode")
+                return
+        
+        # Minimize main window when viewer opens
+        self.root.iconify()
+        
+        # Temporarily remove topmost from main window
+        main_was_topmost = self.root.attributes('-topmost')
+        if main_was_topmost:
+            self.root.attributes('-topmost', False)
+        
+        viewer_window = tk.Toplevel(self.root)
+        viewer_window.title("Unified Player Viewer")
+        viewer_window.geometry("1920x1200")
+        
+        # Get video and CSV paths from project if available
+        if not video_path and hasattr(self, 'input_file_var'):
+            video_path = self.input_file_var.get()
+        if not csv_path and hasattr(self, 'output_file_var'):
+            csv_path = self.output_file_var.get()
+        
+        viewer = UnifiedViewer(viewer_window, mode=mode, video_path=video_path, csv_path=csv_path)
+        
+        # Restore main window when viewer closes
+        def on_close():
+            self.root.deiconify()
+            if main_was_topmost:
+                self.root.attributes('-topmost', True)
+            viewer_window.destroy()
+        
+        viewer_window.protocol("WM_DELETE_WINDOW", on_close)
+    
+    def _open_legacy_setup_wizard(self):
+        """Fallback to legacy setup wizard"""
         try:
             # Try new structure imports first
             try:
@@ -2280,27 +2336,8 @@ Playback Viewer:
     
     def open_gallery_seeder(self):
         """Open player gallery seeder for cross-video player recognition"""
-        try:
-            # Try to import player gallery seeder
-            try:
-                from player_gallery_seeder import PlayerGallerySeeder
-            except ImportError:
-                try:
-                    from legacy.player_gallery_seeder import PlayerGallerySeeder
-                except ImportError:
-                    messagebox.showerror("Error", "Could not import player_gallery_seeder.py")
-                    return
-            
-            seeder_window = tk.Toplevel(self.root)
-            seeder_window.title("Player Gallery Seeder")
-            seeder_window.geometry("1600x1050")
-            seeder_window.transient(self.root)
-            
-            # Ensure window opens on top
-            seeder_window.lift()
-            seeder_window.attributes('-topmost', True)
-            seeder_window.focus_force()
-            seeder_window.after(200, lambda: seeder_window.attributes('-topmost', False))
+        # Use unified viewer in gallery mode
+        self.open_unified_viewer(mode='gallery')
             
             # Get video path if available
             video_path = None

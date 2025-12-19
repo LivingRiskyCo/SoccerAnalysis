@@ -1,0 +1,54 @@
+{
+    "team_colors": {
+        "team1": {
+            "name": "Team 1",
+            "hsv_ranges": {
+                "lower1": [
+                    0,
+                    128,
+                    57
+                ],
+                "upper1": [
+                    10,
+                    255,
+                    255
+                ],
+                "lower2": [
+                    170,
+                    128,
+                    57
+                ],
+                "upper2": [
+                    180,
+                    255,
+                    255
+                ]
+            },
+            "tracker_color_bgr": [
+                128,
+                128,
+                128
+            ]
+        },
+        "team2": {
+            "name": "Team 2",
+            "hsv_ranges": {
+                "lower": [
+                    9,
+                    42,
+                    224
+                ],
+                "upper": [
+                    29,
+                    255,
+                    255
+                ]
+            },
+            "tracker_color_bgr": [
+                128,
+                128,
+                128
+            ]
+        }
+    }
+}

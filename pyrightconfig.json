@@ -1,0 +1,73 @@
+{
+  "include": [
+    "."
+  ],
+  "exclude": [
+    "**/node_modules",
+    "**/__pycache__",
+    "**/env",
+    "**/.venv"
+  ],
+  "reportMissingImports": "warning",
+  "reportMissingTypeStubs": false,
+  "reportUnusedImport": "warning",
+  "reportUnusedVariable": "warning",
+  "reportUnusedClass": "warning",
+  "reportUnusedFunction": "warning",
+  "reportUnusedCoroutine": "warning",
+  "reportGeneralTypeIssues": "warning",
+  "reportOptionalMemberAccess": "warning",
+  "reportOptionalSubscript": "warning",
+  "reportOptionalIterable": "warning",
+  "reportOptionalContextManager": "warning",
+  "reportOptionalOperand": "warning",
+  "reportPrivateImportUsage": "warning",
+  "reportUnknownMemberType": "none",
+  "reportUnknownArgumentType": "none",
+  "reportUnknownVariableType": "none",
+  "reportUnknownParameterType": "none",
+  "reportUnknownReturnType": "none",
+  "reportUnknownLambdaType": "none",
+  "reportUnknownIteratorType": "none",
+  "reportUnknownCallResultType": "none",
+  "reportUnknownAttributeType": "none",
+  "reportIncompatibleMethodOverride": "warning",
+  "reportIncompatibleVariableOverride": "warning",
+  "reportInconsistentConstructor": "warning",
+  "reportOverlappingOverload": "error",
+  "reportUninitializedInstanceVariable": "warning",
+  "reportCallInDefaultInitializer": "warning",
+  "reportUnnecessaryIsInstance": "warning",
+  "reportUnnecessaryCast": "warning",
+  "reportUnnecessaryComparison": "warning",
+  "reportAssertAlwaysTrue": "warning",
+  "reportSelfClsParameterName": "warning",
+  "reportImplicitStringConcatenation": "none",
+  "reportUnusedCallResult": "warning",
+  "reportUnnecessaryTypeIgnoreComment": "warning",
+  "reportMatchNotExhaustive": "warning",
+  "reportShadowedImports": "warning",
+  "reportUnusedExpression": "warning",
+  "reportUnnecessaryComparison": "warning",
+  "reportConstantRedefinition": "warning",
+  "reportIncompatibleMethodOverride": "warning",
+  "reportIncompatibleVariableOverride": "warning",
+  "reportInconsistentConstructor": "warning",
+  "reportInvalidStringEscapeSequence": "warning",
+  "reportUnknownParameterType": "none",
+  "reportMissingParameterType": "none",
+  "reportMissingReturnType": "none",
+  "reportMissingTypeArgument": "none",
+  "reportInvalidTypeVarUse": "error",
+  "pythonVersion": "3.9",
+  "pythonPlatform": "Windows",
+  "typeCheckingMode": "basic"
+}
+
+
+
+
+
+
+
+

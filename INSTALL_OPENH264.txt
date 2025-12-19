@@ -1,0 +1,47 @@
+HOW TO INSTALL OPENH264 DLL (to suppress harmless warnings)
+===========================================================
+
+The OpenH264 errors you see are HARMLESS - your videos encode correctly with avc1 codec.
+This is just to suppress the warning messages.
+
+STEP 1: Download OpenH264 DLL
+------------------------------
+1. Go to: https://github.com/cisco/openh264/releases
+2. Scroll down to find the latest release (v2.4.0 or newer)
+3. Look for a file named something like:
+   - "openh264-2.4.0-win64.dll.bz2" (compressed - needs extraction)
+   - OR "openh264-2.4.0-win64.dll" (direct DLL)
+4. Download it
+
+STEP 2: Extract (if needed)
+----------------------------
+If you downloaded a .bz2 file:
+- Right-click it → Extract (Windows 10/11 can extract .bz2 files)
+- OR use 7-Zip, WinRAR, or similar
+- You should get a file named: openh264-2.4.0-win64.dll
+
+STEP 3: Place DLL in correct location
+--------------------------------------
+Target location: C:\Users\nerdw\soccer_analysis\env\Scripts\
+
+1. Copy the openh264-2.4.0-win64.dll file
+2. Navigate to: C:\Users\nerdw\soccer_analysis\env\Scripts\
+3. Paste the DLL file there
+
+IMPORTANT NOTES:
+- You only need the DLL file, NOT the whole ffmpeg folder
+- Place it directly in env\Scripts\, not in a subfolder
+- The DLL should be named: openh264-2.4.0-win64.dll (or newer version)
+
+STEP 4: Verify
+--------------
+After placing the DLL, restart your analysis. The OpenH264 errors should be gone.
+
+If you still see errors, the DLL might be the wrong version. Try downloading
+a newer version from the releases page.
+
+ALTERNATIVE: The errors are harmless - you can ignore them!
+-----------------------------------------------------------
+Your videos encode correctly with the avc1 codec even without OpenH264.
+The warnings are just informational messages from FFmpeg.
+

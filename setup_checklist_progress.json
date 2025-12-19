@@ -1,0 +1,192 @@
+{
+  "1. Video Setup": [
+    {
+      "text": "Load video file",
+      "checked": true,
+      "tooltip": "Load your video file in the main GUI"
+    },
+    {
+      "text": "Verify video plays correctly",
+      "checked": false,
+      "tooltip": "Check that video loads and plays"
+    },
+    {
+      "text": "Check video resolution and FPS",
+      "checked": false,
+      "tooltip": "Verify resolution and frame rate are correct"
+    }
+  ],
+  "2. Field Calibration": [
+    {
+      "text": "Calibrate field boundaries",
+      "checked": false,
+      "tooltip": "Use Setup Wizard \u2192 Field Calibration to mark field corners"
+    },
+    {
+      "text": "Verify field dimensions",
+      "checked": false,
+      "tooltip": "Check that field size matches your actual field"
+    },
+    {
+      "text": "Test field calibration",
+      "checked": false,
+      "tooltip": "Verify players are detected within field bounds"
+    }
+  ],
+  "3. Team Colors": [
+    {
+      "text": "Detect team colors",
+      "checked": false,
+      "tooltip": "Use Setup Wizard \u2192 Team Colors to detect team jersey colors"
+    },
+    {
+      "text": "Verify team color accuracy",
+      "checked": false,
+      "tooltip": "Check that teams are correctly identified"
+    },
+    {
+      "text": "Adjust HSV ranges if needed",
+      "checked": false,
+      "tooltip": "Fine-tune color detection if teams are misidentified"
+    }
+  ],
+  "4. Ball Colors": [
+    {
+      "text": "Detect ball colors",
+      "checked": false,
+      "tooltip": "Use Setup Wizard \u2192 Ball Colors to detect ball color"
+    },
+    {
+      "text": "Verify ball detection",
+      "checked": false,
+      "tooltip": "Check that ball is detected in video"
+    },
+    {
+      "text": "Adjust ball color if needed",
+      "checked": false,
+      "tooltip": "Fine-tune if ball is not detected consistently"
+    }
+  ],
+  "5. Player Identification": [
+    {
+      "text": "Tag players in Setup Wizard",
+      "checked": false,
+      "tooltip": "Use Setup Wizard \u2192 Tag Players to identify players"
+    },
+    {
+      "text": "Assign jersey numbers",
+      "checked": false,
+      "tooltip": "Enter jersey numbers for each player"
+    },
+    {
+      "text": "Assign teams to players",
+      "checked": false,
+      "tooltip": "Ensure each player has correct team assignment"
+    },
+    {
+      "text": "Tag multiple instances",
+      "checked": false,
+      "tooltip": "Use 'Tag All Instances' for better tracking"
+    }
+  ],
+  "6. Anchor Frames": [
+    {
+      "text": "Create anchor frames",
+      "checked": false,
+      "tooltip": "Anchor frames help with player identification"
+    },
+    {
+      "text": "Tag key frames",
+      "checked": false,
+      "tooltip": "Tag players in multiple frames for better accuracy"
+    },
+    {
+      "text": "Verify anchor frame quality",
+      "checked": false,
+      "tooltip": "Check that anchor frames are accurate"
+    }
+  ],
+  "7. Analysis Settings": [
+    {
+      "text": "Configure tracking settings",
+      "checked": false,
+      "tooltip": "Set tracker type, buffer, etc. in main GUI"
+    },
+    {
+      "text": "Enable/disable Re-ID",
+      "checked": false,
+      "tooltip": "Enable Re-ID for cross-video player identification"
+    },
+    {
+      "text": "Set video type (Practice/Game)",
+      "checked": false,
+      "tooltip": "Select appropriate video type"
+    },
+    {
+      "text": "Configure output settings",
+      "checked": false,
+      "tooltip": "Set output video format, CSV export, etc."
+    }
+  ],
+  "8. Analytics Configuration": [
+    {
+      "text": "Select analytics to display",
+      "checked": false,
+      "tooltip": "Use Analytics Selection button to choose metrics"
+    },
+    {
+      "text": "Set unit preferences",
+      "checked": false,
+      "tooltip": "Choose metric or imperial units"
+    },
+    {
+      "text": "Configure analytics display",
+      "checked": false,
+      "tooltip": "Set which analytics show in video"
+    }
+  ],
+  "9. Project Saving": [
+    {
+      "text": "Save project configuration",
+      "checked": false,
+      "tooltip": "Save all settings to project file"
+    },
+    {
+      "text": "Verify project file created",
+      "checked": false,
+      "tooltip": "Check that project.json file exists"
+    },
+    {
+      "text": "Test project loading",
+      "checked": false,
+      "tooltip": "Load project to verify all settings saved correctly"
+    }
+  ],
+  "10. Testing & Validation": [
+    {
+      "text": "Run preview analysis",
+      "checked": false,
+      "tooltip": "Run a short preview to test settings"
+    },
+    {
+      "text": "Verify player tracking",
+      "checked": false,
+      "tooltip": "Check that players are tracked correctly"
+    },
+    {
+      "text": "Verify team classification",
+      "checked": false,
+      "tooltip": "Check that teams are correctly identified"
+    },
+    {
+      "text": "Check ball tracking",
+      "checked": false,
+      "tooltip": "Verify ball is tracked throughout video"
+    },
+    {
+      "text": "Review analytics output",
+      "checked": false,
+      "tooltip": "Check that analytics are calculated correctly"
+    }
+  ]
+}

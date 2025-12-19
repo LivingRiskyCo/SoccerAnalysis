@@ -1,0 +1,202 @@
+{
+  "practice 11-4": {
+    "color1_name": "White",
+    "color2_name": "Red",
+    "hsv_ranges": {
+      "color1": {
+        "lower": [
+          159,
+          12,
+          225
+        ],
+        "upper": [
+          179,
+          255,
+          255
+        ]
+      },
+      "color2": {
+        "lower1": [
+          0,
+          126,
+          213
+        ],
+        "upper1": [
+          10,
+          255,
+          255
+        ],
+        "lower2": [
+          170,
+          126,
+          213
+        ],
+        "upper2": [
+          180,
+          255,
+          255
+        ]
+      }
+    }
+  },
+  "practice 11-4-v2": {
+    "color1_name": "White",
+    "color2_name": "Red",
+    "hsv_ranges": {
+      "color1": {
+        "lower": [
+          0,
+          0,
+          203
+        ],
+        "upper": [
+          180,
+          30,
+          255
+        ]
+      },
+      "color2": {
+        "lower1": [
+          0,
+          55,
+          204
+        ],
+        "upper1": [
+          10,
+          255,
+          255
+        ],
+        "lower2": [
+          170,
+          55,
+          204
+        ],
+        "upper2": [
+          180,
+          255,
+          255
+        ]
+      }
+    }
+  },
+  "red/white": {
+    "color1_name": "White",
+    "color2_name": "Red",
+    "hsv_ranges": {
+      "color1": {
+        "lower": [
+          0,
+          0,
+          199
+        ],
+        "upper": [
+          180,
+          30,
+          255
+        ]
+      },
+      "color2": {
+        "lower1": [
+          0,
+          50,
+          191
+        ],
+        "upper1": [
+          10,
+          255,
+          255
+        ],
+        "lower2": [
+          170,
+          50,
+          191
+        ],
+        "upper2": [
+          180,
+          255,
+          255
+        ]
+      }
+    }
+  },
+  "Red/White": {
+    "color1_name": "White",
+    "color2_name": "Red",
+    "hsv_ranges": {
+      "color1": {
+        "lower": [
+          0,
+          0,
+          225
+        ],
+        "upper": [
+          180,
+          74,
+          255
+        ]
+      },
+      "color2": {
+        "lower1": [
+          0,
+          191,
+          165
+        ],
+        "upper1": [
+          10,
+          255,
+          255
+        ],
+        "lower2": [
+          170,
+          191,
+          165
+        ],
+        "upper2": [
+          180,
+          255,
+          255
+        ]
+      }
+    }
+  },
+  "Practice 11-4": {
+    "color1_name": "White",
+    "color2_name": "Red",
+    "hsv_ranges": {
+      "color1": {
+        "lower": [
+          159,
+          12,
+          225
+        ],
+        "upper": [
+          179,
+          255,
+          255
+        ]
+      },
+      "color2": {
+        "lower1": [
+          0,
+          126,
+          213
+        ],
+        "upper1": [
+          10,
+          255,
+          255
+        ],
+        "lower2": [
+          170,
+          126,
+          213
+        ],
+        "upper2": [
+          180,
+          255,
+          255
+        ]
+      }
+    }
+  }
+}

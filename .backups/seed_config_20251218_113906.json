@@ -1,0 +1,125 @@
+{
+    "player_mappings": {
+        "1": [
+            "Wesley Beckett",
+            ""
+        ],
+        "2": [
+            "Cameron Hill",
+            ""
+        ],
+        "5": [
+            "Carson Gribble",
+            ""
+        ],
+        "6": [
+            "Carson Gribble",
+            ""
+        ],
+        "7": [
+            "Carson Gribble",
+            ""
+        ],
+        "8": [
+            "Carson Gribble",
+            ""
+        ],
+        "9": [
+            "Carson Gribble",
+            ""
+        ],
+        "10": [
+            "Carson Gribble",
+            ""
+        ],
+        "11": [
+            "Carson Gribble",
+            ""
+        ],
+        "12": [
+            "Carson Gribble",
+            ""
+        ],
+        "13": [
+            "Carson Gribble",
+            ""
+        ],
+        "14": [
+            "Cameron Hill",
+            ""
+        ],
+        "16": [
+            "Jax Derryberry",
+            ""
+        ],
+        "17": [
+            "Jax Derryberry",
+            ""
+        ],
+        "19": [
+            "Carson Gribble",
+            ""
+        ],
+        "25": [
+            "Cameron Hill",
+            ""
+        ],
+        "27": [
+            "Ellie Hill",
+            ""
+        ],
+        "28": [
+            "Ellie Hill",
+            ""
+        ],
+        "29": [
+            "Ellie Hill",
+            ""
+        ],
+        "31": [
+            "Cameron Hill",
+            ""
+        ],
+        "32": [
+            "Cameron Hill",
+            ""
+        ],
+        "33": [
+            "Anay Rao",
+            ""
+        ],
+        "34": [
+            "Cameron Hill",
+            ""
+        ],
+        "35": [
+            "Ellie Hill",
+            ""
+        ],
+        "36": [
+            "Ellie Hill",
+            ""
+        ],
+        "37": [
+            "Jax Derryberry",
+            ""
+        ],
+        "38": [
+            "Cameron Hill",
+            ""
+        ],
+        "15": [
+            "Jax Derryberry",
+            ""
+        ]
+    },
+    "referee_mappings": {},
+    "rejected_ids": [],
+    "merged_ids": {},
+    "ball_positions": [],
+    "substitution_events": [],
+    "player_roster": {},
+    "anchor_frames": {},
+    "video_path": "C:/Users/nerdw/Videos/Outdoor\\20251001_184113.mp4",
+    "current_frame": 0
+}

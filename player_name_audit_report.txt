@@ -1,0 +1,232 @@
+Player Name Normalization Audit Report
+================================================================================
+Total issues found: 53
+================================================================================
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 4593: player_names assignment
+  Code: player_names[track_id_str] = player_name
+  Issue: Player name assigned without normalization
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 4596: player_names assignment
+  Code: player_names[track_id_str] = player_name
+  Issue: Player name assigned without normalization
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 5452: player_names assignment
+  Code: player_names[matched_track_id] = prev_name
+  Issue: Player name assigned without normalization
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 5456: player_names assignment
+  Code: player_names[matched_track_id] = prev_name
+  Issue: Player name assigned without normalization
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 7734: player_names assignment
+  Code: if track_str in player_names and player_names[track_str] == player_name:
+  Issue: Player name assigned without normalization
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 7735: player_names assignment
+  Code: player_names[track_str] = ""  # Clear old track
+  Issue: Player name assigned without normalization
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 7915: player_names assignment
+  Code: filtered_player_names[track_id_str] = player_name
+  Issue: Player name assigned without normalization
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 9862: player_names assignment
+  Code: player_names[old_track_str] = ""
+  Issue: Player name assigned without normalization
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 9866: player_names assignment
+  Code: player_names[track_id_str] = protected_name
+  Issue: Player name assigned without normalization
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 9899: player_names assignment
+  Code: player_names[old_track_str] = ""  # Clear old track
+  Issue: Player name assigned without normalization
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 9907: player_names assignment
+  Code: player_names[track_id_str] = protected_name
+  Issue: Player name assigned without normalization
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 9911: player_names assignment
+  Code: player_names[track_id_str] = protected_name
+  Issue: Player name assigned without normalization
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 9954: player_names assignment
+  Code: player_names[old_track_str] = ""  # Clear old track
+  Issue: Player name assigned without normalization
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 9962: player_names assignment
+  Code: player_names[track_id_str] = protected_name
+  Issue: Player name assigned without normalization
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 9966: player_names assignment
+  Code: player_names[track_id_str] = protected_name
+  Issue: Player name assigned without normalization
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 9996: player_names assignment
+  Code: player_names[old_track_str] = ""  # Clear old track
+  Issue: Player name assigned without normalization
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 10002: player_names assignment
+  Code: player_names[track_id_str] = protected_name
+  Issue: Player name assigned without normalization
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 10457: player_names assignment
+  Code: player_names[old_track_str] = ""  # Clear old track
+  Issue: Player name assigned without normalization
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 10467: player_names assignment
+  Code: player_names[track_id_str] = anchor_player_name
+  Issue: Player name assigned without normalization
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 10575: player_names assignment
+  Code: player_names[track_id_str] = anchor_player_name
+  Issue: Player name assigned without normalization
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 10578: player_names assignment
+  Code: has_name = track_id_str in player_names and player_names[track_id_str] == anchor_player_name
+  Issue: Player name assigned without normalization
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 10730: player_names assignment
+  Code: player_names[retro_track_id_str] = anchor_player_name
+  Issue: Player name assigned without normalization
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 11285: player_names assignment
+  Code: player_names[old_track_str] = ""
+  Issue: Player name assigned without normalization
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 11291: player_names assignment
+  Code: player_names[new_track_str] = player_name
+  Issue: Player name assigned without normalization
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 11332: player_names assignment
+  Code: player_names[track_id_str] = player_name
+  Issue: Player name assigned without normalization
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 11449: player_names assignment
+  Code: player_names[old_track_str] = ""  # Clear old track
+  Issue: Player name assigned without normalization
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 11455: player_names assignment
+  Code: player_names[recovery_track_str] = player_name
+  Issue: Player name assigned without normalization
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 11458: player_names assignment
+  Code: player_names[recovery_track_str] = player_name
+  Issue: Player name assigned without normalization
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 11497: player_names assignment
+  Code: player_names[old_track_str] = ""  # Clear old track
+  Issue: Player name assigned without normalization
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 11503: player_names assignment
+  Code: player_names[recovery_track_str] = player_name
+  Issue: Player name assigned without normalization
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 11507: player_names assignment
+  Code: player_names[recovery_track_str] = player_name
+  Issue: Player name assigned without normalization
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 12479: player_names assignment
+  Code: player_names[new_track_str] = lost_player_name
+  Issue: Player name assigned without normalization
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 12497: player_names assignment
+  Code: player_names[lost_track_str] = ""
+  Issue: Player name assigned without normalization
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 13434: player_names assignment
+  Code: player_names[track_id_str] = anchor_player_name
+  Issue: Player name assigned without normalization
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 13598: player_names assignment
+  Code: player_names[track_id_str] = anchor_player_name
+  Issue: Player name assigned without normalization
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 13835: player_names assignment
+  Code: player_names[old_track_str] = ""  # Clear name from old track
+  Issue: Player name assigned without normalization
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 14633: player_names assignment
+  Code: player_names[old_track_str] = ""  # Clear old track
+  Issue: Player name assigned without normalization
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 14640: player_names assignment
+  Code: player_names[pid_str] = protected_name
+  Issue: Player name assigned without normalization
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 14747: player_names assignment
+  Code: player_names[pid_str] = protected_name
+  Issue: Player name assigned without normalization
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 14841: player_names assignment
+  Code: player_names[pid_str] = anchor_name
+  Issue: Player name assigned without normalization
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 15355: player_names assignment
+  Code: player_names[old_pid_str] = ""
+  Issue: Player name assigned without normalization
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 16018: player_names assignment
+  Code: player_names[pid_str] = alt_name
+  Issue: Player name assigned without normalization
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 16196: player_names assignment
+  Code: player_names[pid_str] = player_name
+  Issue: Player name assigned without normalization
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 16495: player_names assignment
+  Code: player_names[old_track_str] = ""  # Clear old track
+  Issue: Player name assigned without normalization
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 16502: player_names assignment
+  Code: player_names[track_id_str] = correct_player
+  Issue: Player name assigned without normalization
+
+File: C:\Users\nerdw\soccer_analysis\combined_analysis_optimized.py
+  Line 16504: player_names assignment

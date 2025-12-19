@@ -1,0 +1,16 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../Videos/Practice-11-4-2025-Tripod-Test"
+		},
+		{
+			"path": "../Documents/DSX"
+		}
+	],
+	"settings": {
+		"powershell.cwd": "soccer_analysis"
+	}
+}
