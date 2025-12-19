@@ -979,8 +979,7 @@ class SetupMode(BaseMode):
             # Match to gallery
             match_result = self.gallery_manager.match_player(
                 features=features,
-                foot_features=foot_features,
-                detected_jersey=detected_jersey
+                jersey_number=detected_jersey
             )
             
             if match_result:
