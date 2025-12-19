@@ -167,8 +167,41 @@ class PlaybackMode(BaseMode):
         self.show_ball_trail = tk.BooleanVar(value=True)
         self.ball_trail = []  # List of recent ball positions
         
-        # Comparison mode (for future)
+        # Comparison mode
         self.comparison_mode = False
+        self.frame1 = None
+        self.frame2 = None
+        self.id1 = None
+        self.id2 = None
+        self.canvas1 = None
+        self.canvas2 = None
+        self.comparison_window = None
+        self.zoom_level1 = 1.0
+        self.zoom_level2 = 1.0
+        self.pan_x1 = 0
+        self.pan_y1 = 0
+        self.pan_x2 = 0
+        self.pan_y2 = 0
+        self.pan_start_x1 = 0
+        self.pan_start_y1 = 0
+        self.pan_start_x2 = 0
+        self.pan_start_y2 = 0
+        self.frame1_label = None
+        self.frame2_label = None
+        self.zoom_label1 = None
+        self.zoom_label2 = None
+        
+        # Heatmaps
+        self.show_heatmap = tk.BooleanVar(value=False)
+        self.heatmap_type = tk.StringVar(value="position")  # position, speed, acceleration
+        self.heatmap_opacity = tk.DoubleVar(value=0.5)
+        self.heatmap_radius = tk.IntVar(value=30)
+        self.heatmap_player_id = tk.StringVar(value="all")  # "all" or specific player ID
+        self.heatmap_time_range = tk.IntVar(value=300)  # frames to include in heatmap
+        
+        # Event timeline viewer
+        self.event_timeline_viewer = None
+        self.event_tracker = None
     
     def create_ui(self):
         """Create playback mode UI with tabbed interface"""
@@ -476,6 +509,63 @@ class PlaybackMode(BaseMode):
                                      textvariable=self.analytics_bar_width, width=10,
                                      command=self.update_display)
         bar_width_spin.pack(fill=tk.X, pady=2)
+        
+        # Heatmaps
+        heatmap_frame = ttk.LabelFrame(parent, text="Heatmaps", padding=5)
+        heatmap_frame.pack(fill=tk.X, pady=5)
+        
+        ttk.Checkbutton(heatmap_frame, text="Show Heatmap", 
+                       variable=self.show_heatmap,
+                       command=self.update_display).pack(anchor=tk.W)
+        
+        ttk.Label(heatmap_frame, text="Type:").pack(anchor=tk.W, pady=(5, 0))
+        heatmap_type_combo = ttk.Combobox(heatmap_frame, textvariable=self.heatmap_type,
+                                         values=["position", "speed", "acceleration", "possession"],
+                                         state='readonly', width=20)
+        heatmap_type_combo.pack(fill=tk.X, pady=2)
+        heatmap_type_combo.bind('<<ComboboxSelected>>', lambda e: self.update_display())
+        
+        ttk.Label(heatmap_frame, text="Player:").pack(anchor=tk.W, pady=(5, 0))
+        self.heatmap_player_combo = ttk.Combobox(heatmap_frame, textvariable=self.heatmap_player_id,
+                                                 values=["all"], state='readonly', width=20)
+        self.heatmap_player_combo.pack(fill=tk.X, pady=2)
+        self.heatmap_player_combo.bind('<<ComboboxSelected>>', lambda e: self.update_display())
+        
+        ttk.Label(heatmap_frame, text="Opacity:").pack(anchor=tk.W, pady=(5, 0))
+        heatmap_opacity_spin = ttk.Spinbox(heatmap_frame, from_=0.1, to=1.0, increment=0.1,
+                                          textvariable=self.heatmap_opacity, width=10, format="%.1f",
+                                          command=self.update_display)
+        heatmap_opacity_spin.pack(fill=tk.X, pady=2)
+        
+        ttk.Label(heatmap_frame, text="Radius:").pack(anchor=tk.W, pady=(5, 0))
+        heatmap_radius_spin = ttk.Spinbox(heatmap_frame, from_=10, to=100, increment=5,
+                                         textvariable=self.heatmap_radius, width=10,
+                                         command=self.update_display)
+        heatmap_radius_spin.pack(fill=tk.X, pady=2)
+        
+        ttk.Label(heatmap_frame, text="Time Range (frames):").pack(anchor=tk.W, pady=(5, 0))
+        heatmap_range_spin = ttk.Spinbox(heatmap_frame, from_=30, to=1000, increment=30,
+                                         textvariable=self.heatmap_time_range, width=10,
+                                         command=self.update_display)
+        heatmap_range_spin.pack(fill=tk.X, pady=2)
+        
+        # Event Timeline Viewer
+        event_timeline_frame = ttk.LabelFrame(parent, text="Event Timeline", padding=5)
+        event_timeline_frame.pack(fill=tk.X, pady=5)
+        
+        ttk.Button(event_timeline_frame, text="📊 Open Event Timeline", 
+                  command=self.open_event_timeline).pack(fill=tk.X, pady=2)
+        
+        # Comparison Mode
+        comparison_frame = ttk.LabelFrame(parent, text="Comparison Mode", padding=5)
+        comparison_frame.pack(fill=tk.X, pady=5)
+        
+        ttk.Button(comparison_frame, text="🔍 Open Comparison Mode", 
+                  command=self.open_comparison_dialog).pack(fill=tk.X, pady=2)
+        
+        ttk.Label(comparison_frame, 
+                 text="Compare two frames side-by-side with independent zoom/pan",
+                 font=("Arial", 8), foreground="gray", wraplength=300).pack(pady=2)
     
     def display_frame(self, frame: np.ndarray, frame_num: int):
         """Display a frame with overlays and analytics"""
@@ -534,6 +624,10 @@ class PlaybackMode(BaseMode):
             if self.show_field_zones.get():
                 # Field zones drawing would go here
                 pass
+            
+            # Draw heatmap
+            if self.show_heatmap.get():
+                display_frame = self.draw_heatmap(display_frame, frame_num)
         
         # Render analytics
         if self.show_analytics.get() and self.analytics_data:
@@ -1151,9 +1245,31 @@ class PlaybackMode(BaseMode):
                     
                     if analytics:
                         self.analytics_data[frame_num][player_id] = analytics
+            
+            # Update heatmap player dropdown
+            self.update_heatmap_player_dropdown()
         
         self.update_display()
         self.status_label.config(text="CSV loaded - Analytics available")
+    
+    def update_heatmap_player_dropdown(self):
+        """Update heatmap player dropdown with available players"""
+        if not hasattr(self, 'heatmap_player_combo'):
+            return
+        
+        if not self.csv_manager.is_loaded():
+            self.heatmap_player_combo['values'] = ["all"]
+            return
+        
+        # Get unique player IDs from CSV
+        player_ids = set()
+        if hasattr(self.csv_manager, 'df') and self.csv_manager.df is not None:
+            if 'player_id' in self.csv_manager.df.columns:
+                player_ids = sorted([int(pid) for pid in self.csv_manager.df['player_id'].dropna().unique()])
+        
+        # Create dropdown values
+        values = ["all"] + [str(pid) for pid in player_ids]
+        self.heatmap_player_combo['values'] = values
     
     # ==================== FILE OPERATIONS ====================
     
@@ -1563,9 +1679,513 @@ class PlaybackMode(BaseMode):
         
         return display_frame
     
+    # ==================== HEATMAPS ====================
+    
+    def draw_heatmap(self, display_frame: np.ndarray, frame_num: int) -> np.ndarray:
+        """Draw player heatmap overlay"""
+        if not self.csv_manager.is_loaded():
+            return display_frame
+        
+        heatmap_type = self.heatmap_type.get()
+        opacity = self.heatmap_opacity.get()
+        radius = self.heatmap_radius.get()
+        time_range = self.heatmap_time_range.get()
+        player_filter = self.heatmap_player_id.get()
+        
+        # Collect data points for heatmap
+        start_frame = max(0, frame_num - time_range)
+        end_frame = min(self.video_manager.total_frames, frame_num + 1)
+        
+        points = []
+        weights = []
+        
+        for f in range(start_frame, end_frame):
+            player_data = self.csv_manager.get_player_data(f)
+            for player_id, (x, y, team, name, bbox) in player_data.items():
+                player_id_int = int(player_id)
+                
+                # Filter by player if specified
+                if player_filter != "all":
+                    try:
+                        if int(player_filter) != player_id_int:
+                            continue
+                    except:
+                        pass
+                
+                # Convert coordinates
+                if 0.0 <= x <= 1.0 and 0.0 <= y <= 1.0:
+                    x = int(x * self.video_manager.width)
+                    y = int(y * self.video_manager.height)
+                
+                points.append((int(x), int(y)))
+                
+                # Calculate weight based on heatmap type
+                weight = 1.0
+                if heatmap_type == "speed" and self.analytics_data:
+                    # Use speed as weight
+                    if f in self.analytics_data and player_id_int in self.analytics_data[f]:
+                        speed = self.analytics_data[f][player_id_int].get('player_speed_mps', 0)
+                        weight = max(0.1, min(2.0, speed / 5.0))  # Normalize to 0.1-2.0
+                elif heatmap_type == "acceleration" and self.analytics_data:
+                    # Use acceleration as weight
+                    if f in self.analytics_data and player_id_int in self.analytics_data[f]:
+                        accel = abs(self.analytics_data[f][player_id_int].get('player_acceleration_mps2', 0))
+                        weight = max(0.1, min(2.0, accel / 3.0))  # Normalize to 0.1-2.0
+                elif heatmap_type == "possession":
+                    # Weight by time spent (more recent = higher weight)
+                    frame_age = frame_num - f
+                    weight = max(0.1, 1.0 - (frame_age / time_range))
+                
+                weights.append(weight)
+        
+        if not points:
+            return display_frame
+        
+        # Create heatmap using Gaussian blur
+        h, w = display_frame.shape[:2]
+        heatmap = np.zeros((h, w), dtype=np.float32)
+        
+        for (px, py), weight in zip(points, weights):
+            # Create Gaussian kernel for this point
+            y_coords, x_coords = np.ogrid[:h, :w]
+            dist_sq = (x_coords - px)**2 + (y_coords - py)**2
+            gaussian = np.exp(-dist_sq / (2 * (radius ** 2))) * weight
+            heatmap += gaussian
+        
+        # Normalize heatmap
+        if heatmap.max() > 0:
+            heatmap = heatmap / heatmap.max()
+        
+        # Apply colormap (hot colormap: black -> red -> yellow -> white)
+        heatmap_colored = cv2.applyColorMap((heatmap * 255).astype(np.uint8), cv2.COLORMAP_HOT)
+        
+        # Blend with original frame
+        overlay = display_frame.copy()
+        mask = (heatmap > 0.1).astype(np.uint8)  # Only show areas with significant activity
+        overlay[mask > 0] = heatmap_colored[mask > 0]
+        
+        result = cv2.addWeighted(display_frame, 1.0 - opacity, overlay, opacity, 0)
+        
+        return result
+    
+    # ==================== EVENT TIMELINE VIEWER ====================
+    
+    def open_event_timeline(self):
+        """Open event timeline viewer window"""
+        try:
+            # Try to import EventTimelineViewer
+            try:
+                from event_timeline_viewer import EventTimelineViewer
+            except ImportError:
+                # Try alternative path
+                current_file = __file__
+                parent_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(current_file)))))
+                timeline_path = os.path.join(parent_dir, 'event_timeline_viewer.py')
+                if os.path.exists(timeline_path):
+                    import importlib.util
+                    spec = importlib.util.spec_from_file_location("event_timeline_viewer", timeline_path)
+                    timeline_module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(timeline_module)
+                    EventTimelineViewer = timeline_module.EventTimelineViewer
+                else:
+                    messagebox.showwarning("Not Available", "Event Timeline Viewer module not found")
+                    return
+            
+            # Check if already open
+            if self.event_timeline_viewer and hasattr(self.event_timeline_viewer, 'window'):
+                try:
+                    if self.event_timeline_viewer.window.winfo_exists():
+                        self.event_timeline_viewer.window.focus()
+                        return
+                except:
+                    pass
+            
+            # Initialize event tracker if needed
+            if not self.event_tracker:
+                try:
+                    from event_tracker import EventTracker
+                    self.event_tracker = EventTracker(
+                        video_path=self.video_manager.video_path,
+                        fps=self.video_manager.fps
+                    )
+                    # Load events from CSV if available
+                    if self.csv_manager.is_loaded() and hasattr(self.csv_manager, 'df'):
+                        self.event_tracker.load_from_csv(self.csv_manager.df)
+                except ImportError:
+                    messagebox.showwarning("Event Tracker", "Event Tracker module not available")
+                    return
+            
+            # Create timeline viewer
+            def jump_to_frame(frame_num):
+                """Callback to jump to frame in main viewer"""
+                self.goto_frame(frame_num)
+                self.viewer.root.focus()
+            
+            self.event_timeline_viewer = EventTimelineViewer(
+                parent=self.viewer.root,
+                event_tracker=self.event_tracker,
+                total_frames=self.video_manager.total_frames,
+                fps=self.video_manager.fps,
+                jump_callback=jump_to_frame
+            )
+            
+        except Exception as e:
+            messagebox.showerror("Error", f"Could not open event timeline viewer: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    # ==================== COMPARISON MODE ====================
+    
+    def toggle_comparison_mode(self):
+        """Toggle comparison mode on/off"""
+        # This will be called from the checkbox
+        # We'll implement a dialog to set frames
+        self.open_comparison_dialog()
+    
+    def open_comparison_dialog(self):
+        """Open dialog to configure comparison mode"""
+        dialog = tk.Toplevel(self.viewer.root)
+        dialog.title("Comparison Mode Setup")
+        dialog.geometry("400x200")
+        dialog.transient(self.viewer.root)
+        dialog.grab_set()
+        
+        ttk.Label(dialog, text="Compare Two Frames", font=("Arial", 12, "bold")).pack(pady=10)
+        
+        frame1_frame = ttk.Frame(dialog)
+        frame1_frame.pack(fill=tk.X, padx=20, pady=5)
+        ttk.Label(frame1_frame, text="Frame 1:").pack(side=tk.LEFT, padx=5)
+        frame1_var = tk.StringVar(value=str(self.viewer.current_frame_num))
+        frame1_entry = ttk.Entry(frame1_frame, textvariable=frame1_var, width=10)
+        frame1_entry.pack(side=tk.LEFT, padx=5)
+        ttk.Button(frame1_frame, text="Current", command=lambda: frame1_var.set(str(self.viewer.current_frame_num))).pack(side=tk.LEFT, padx=2)
+        
+        frame2_frame = ttk.Frame(dialog)
+        frame2_frame.pack(fill=tk.X, padx=20, pady=5)
+        ttk.Label(frame2_frame, text="Frame 2:").pack(side=tk.LEFT, padx=5)
+        frame2_var = tk.StringVar(value=str(min(self.viewer.current_frame_num + 30, self.video_manager.total_frames - 1)))
+        frame2_entry = ttk.Entry(frame2_frame, textvariable=frame2_var, width=10)
+        frame2_entry.pack(side=tk.LEFT, padx=5)
+        ttk.Button(frame2_frame, text="Current", command=lambda: frame2_var.set(str(self.viewer.current_frame_num))).pack(side=tk.LEFT, padx=2)
+        
+        id1_frame = ttk.Frame(dialog)
+        id1_frame.pack(fill=tk.X, padx=20, pady=5)
+        ttk.Label(id1_frame, text="Player ID 1 (optional):").pack(side=tk.LEFT, padx=5)
+        id1_var = tk.StringVar()
+        id1_entry = ttk.Entry(id1_frame, textvariable=id1_var, width=10)
+        id1_entry.pack(side=tk.LEFT, padx=5)
+        
+        id2_frame = ttk.Frame(dialog)
+        id2_frame.pack(fill=tk.X, padx=20, pady=5)
+        ttk.Label(id2_frame, text="Player ID 2 (optional):").pack(side=tk.LEFT, padx=5)
+        id2_var = tk.StringVar()
+        id2_entry = ttk.Entry(id2_frame, textvariable=id2_var, width=10)
+        id2_entry.pack(side=tk.LEFT, padx=5)
+        
+        def start_comparison():
+            try:
+                frame1 = int(frame1_var.get())
+                frame2 = int(frame2_var.get())
+                id1 = int(id1_var.get()) if id1_var.get().strip() else None
+                id2 = int(id2_var.get()) if id2_var.get().strip() else None
+                
+                if frame1 < 0 or frame1 >= self.video_manager.total_frames:
+                    messagebox.showerror("Error", f"Frame 1 out of range (0-{self.video_manager.total_frames - 1})")
+                    return
+                if frame2 < 0 or frame2 >= self.video_manager.total_frames:
+                    messagebox.showerror("Error", f"Frame 2 out of range (0-{self.video_manager.total_frames - 1})")
+                    return
+                
+                self.start_comparison_mode(frame1, frame2, id1, id2)
+                dialog.destroy()
+            except ValueError:
+                messagebox.showerror("Error", "Please enter valid frame numbers")
+        
+        button_frame = ttk.Frame(dialog)
+        button_frame.pack(pady=10)
+        ttk.Button(button_frame, text="Start Comparison", command=start_comparison).pack(side=tk.LEFT, padx=5)
+        ttk.Button(button_frame, text="Cancel", command=dialog.destroy).pack(side=tk.LEFT, padx=5)
+    
+    def start_comparison(self):
+        """Start comparison from UI controls"""
+        try:
+            frame1 = int(self.comparison_frame1_var.get())
+            frame2 = int(self.comparison_frame2_var.get())
+            self.start_comparison_mode(frame1, frame2, None, None)
+        except ValueError:
+            messagebox.showerror("Error", "Please enter valid frame numbers")
+    
+    def start_comparison_mode(self, frame1: int, frame2: int, id1: int = None, id2: int = None):
+        """Start comparison mode with two frames"""
+        self.comparison_mode = True
+        self.frame1 = frame1
+        self.frame2 = frame2
+        self.id1 = id1
+        self.id2 = id2
+        
+        # Create comparison window
+        self.create_comparison_window()
+        
+        # Render both frames
+        self.render_comparison()
+    
+    def create_comparison_window(self):
+        """Create comparison mode window with two canvases"""
+        if hasattr(self, 'comparison_window') and self.comparison_window:
+            try:
+                if self.comparison_window.winfo_exists():
+                    self.comparison_window.focus()
+                    return
+            except:
+                pass
+        
+        self.comparison_window = tk.Toplevel(self.viewer.root)
+        self.comparison_window.title("Frame Comparison")
+        self.comparison_window.geometry("1600x900")
+        
+        # Main container
+        main_frame = ttk.Frame(self.comparison_window)
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+        # Top controls
+        controls_frame = ttk.Frame(main_frame)
+        controls_frame.pack(fill=tk.X, pady=5)
+        
+        ttk.Label(controls_frame, text=f"Frame {self.frame1}", font=("Arial", 10, "bold")).pack(side=tk.LEFT, padx=10)
+        ttk.Label(controls_frame, text="vs", font=("Arial", 10)).pack(side=tk.LEFT, padx=10)
+        ttk.Label(controls_frame, text=f"Frame {self.frame2}", font=("Arial", 10, "bold")).pack(side=tk.LEFT, padx=10)
+        
+        ttk.Button(controls_frame, text="Close Comparison", command=self.close_comparison_mode).pack(side=tk.RIGHT, padx=5)
+        
+        # Two canvas side-by-side
+        canvas_frame = ttk.Frame(main_frame)
+        canvas_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Canvas 1
+        canvas1_frame = ttk.Frame(canvas_frame)
+        canvas1_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5)
+        
+        self.frame1_label = ttk.Label(canvas1_frame, text=f"Frame {self.frame1}", font=("Arial", 9))
+        self.frame1_label.pack(pady=2)
+        
+        self.canvas1 = tk.Canvas(canvas1_frame, bg='black')
+        self.canvas1.pack(fill=tk.BOTH, expand=True)
+        self.canvas1.bind('<MouseWheel>', lambda e: self.zoom_canvas(1, 1.1 if e.delta > 0 else 0.9))
+        self.canvas1.bind('<Button-3>', lambda e: self.start_pan(1, e))
+        self.canvas1.bind('<B3-Motion>', lambda e: self.pan_canvas(1, e))
+        self.canvas1.bind('<ButtonRelease-3>', lambda e: self.stop_pan(1))
+        
+        # Canvas 2
+        canvas2_frame = ttk.Frame(canvas_frame)
+        canvas2_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5)
+        
+        self.frame2_label = ttk.Label(canvas2_frame, text=f"Frame {self.frame2}", font=("Arial", 9))
+        self.frame2_label.pack(pady=2)
+        
+        self.canvas2 = tk.Canvas(canvas2_frame, bg='black')
+        self.canvas2.pack(fill=tk.BOTH, expand=True)
+        self.canvas2.bind('<MouseWheel>', lambda e: self.zoom_canvas(2, 1.1 if e.delta > 0 else 0.9))
+        self.canvas2.bind('<Button-3>', lambda e: self.start_pan(2, e))
+        self.canvas2.bind('<B3-Motion>', lambda e: self.pan_canvas(2, e))
+        self.canvas2.bind('<ButtonRelease-3>', lambda e: self.stop_pan(2))
+        
+        # Zoom labels
+        zoom_frame = ttk.Frame(main_frame)
+        zoom_frame.pack(fill=tk.X, pady=5)
+        
+        self.zoom_label1 = ttk.Label(zoom_frame, text="1.0x")
+        self.zoom_label1.pack(side=tk.LEFT, padx=20)
+        
+        ttk.Label(zoom_frame, text="Mouse wheel to zoom, Right-click drag to pan", 
+                 font=("Arial", 8), foreground="gray").pack(side=tk.LEFT, padx=20)
+        
+        self.zoom_label2 = ttk.Label(zoom_frame, text="1.0x")
+        self.zoom_label2.pack(side=tk.RIGHT, padx=20)
+    
+    def render_comparison(self):
+        """Render both frames in comparison mode"""
+        if not self.comparison_mode or not hasattr(self, 'canvas1') or not hasattr(self, 'canvas2'):
+            return
+        
+        # Load and render frame 1
+        frame1 = self.video_manager.get_frame(self.frame1)
+        if frame1 is not None:
+            display_frame1 = self.prepare_frame_for_display(frame1, self.frame1)
+            display_frame1 = self.apply_zoom_pan_canvas(display_frame1, 1)
+            self._display_image_on_canvas(display_frame1, self.canvas1)
+        
+        # Load and render frame 2
+        frame2 = self.video_manager.get_frame(self.frame2)
+        if frame2 is not None:
+            display_frame2 = self.prepare_frame_for_display(frame2, self.frame2)
+            display_frame2 = self.apply_zoom_pan_canvas(display_frame2, 2)
+            self._display_image_on_canvas(display_frame2, self.canvas2)
+    
+    def prepare_frame_for_display(self, frame: np.ndarray, frame_num: int) -> np.ndarray:
+        """Prepare frame with all overlays"""
+        display_frame = frame.copy()
+        
+        # Draw CSV overlays
+        if self.csv_manager.is_loaded():
+            if self.show_players_var.get():
+                player_data = self.csv_manager.get_player_data(frame_num)
+                for player_id, (x, y, team, name, bbox) in player_data.items():
+                    if 0.0 <= x <= 1.0 and 0.0 <= y <= 1.0:
+                        x = int(x * self.video_manager.width)
+                        y = int(y * self.video_manager.height)
+                    
+                    color = self.get_player_color(int(player_id), team, name)
+                    cv2.circle(display_frame, (int(x), int(y)), 10, color, 2)
+                    
+                    if self.show_labels_var.get() and name:
+                        cv2.putText(display_frame, name, (int(x) + 15, int(y)),
+                                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+            
+            if self.show_ball_var.get():
+                ball_data = self.csv_manager.get_ball_data(frame_num)
+                if ball_data:
+                    ball_x, ball_y, normalized = ball_data
+                    if normalized:
+                        ball_x = int(ball_x * self.video_manager.width)
+                        ball_y = int(ball_y * self.video_manager.height)
+                    cv2.circle(display_frame, (int(ball_x), int(ball_y)), 8, (0, 0, 255), -1)
+        
+        return display_frame
+    
+    def apply_zoom_pan_canvas(self, frame: np.ndarray, canvas_num: int) -> np.ndarray:
+        """Apply zoom and pan for comparison canvas"""
+        if canvas_num == 1:
+            zoom = self.zoom_level1
+            pan_x = self.pan_x1
+            pan_y = self.pan_y1
+        else:
+            zoom = self.zoom_level2
+            pan_x = self.pan_x2
+            pan_y = self.pan_y2
+        
+        if zoom == 1.0 and pan_x == 0 and pan_y == 0:
+            return frame
+        
+        h, w = frame.shape[:2]
+        new_w = int(w * zoom)
+        new_h = int(h * zoom)
+        
+        zoomed = cv2.resize(frame, (new_w, new_h))
+        
+        crop_x = int((new_w - w) / 2 - pan_x)
+        crop_y = int((new_h - h) / 2 - pan_y)
+        
+        crop_x = max(0, min(crop_x, new_w - w))
+        crop_y = max(0, min(crop_y, new_h - h))
+        
+        if crop_x + w <= new_w and crop_y + h <= new_h:
+            cropped = zoomed[crop_y:crop_y+h, crop_x:crop_x+w]
+        else:
+            cropped = frame
+        
+        return cropped
+    
+    def _display_image_on_canvas(self, frame: np.ndarray, canvas: tk.Canvas):
+        """Display image on a specific canvas"""
+        canvas_width = canvas.winfo_width()
+        canvas_height = canvas.winfo_height()
+        
+        if canvas_width <= 1 or canvas_height <= 1:
+            canvas.update_idletasks()
+            canvas_width = canvas.winfo_width()
+            canvas_height = canvas.winfo_height()
+        
+        if canvas_width <= 1 or canvas_height <= 1:
+            return
+        
+        scale = min(canvas_width / frame.shape[1], canvas_height / frame.shape[0])
+        new_width = int(frame.shape[1] * scale)
+        new_height = int(frame.shape[0] * scale)
+        
+        resized = cv2.resize(frame, (new_width, new_height))
+        rgb = cv2.cvtColor(resized, cv2.COLOR_BGR2RGB)
+        img = Image.fromarray(rgb)
+        photo = ImageTk.PhotoImage(image=img)
+        
+        canvas.delete("all")
+        canvas.create_image(canvas_width // 2, canvas_height // 2, 
+                          image=photo, anchor=tk.CENTER)
+        canvas.image = photo
+    
+    def zoom_canvas(self, canvas_num: int, zoom_factor: float):
+        """Zoom canvas in comparison mode"""
+        if canvas_num == 1:
+            self.zoom_level1 = max(0.5, min(5.0, self.zoom_level1 * zoom_factor))
+            if hasattr(self, 'zoom_label1'):
+                self.zoom_label1.config(text=f"{self.zoom_level1:.1f}x")
+        else:
+            self.zoom_level2 = max(0.5, min(5.0, self.zoom_level2 * zoom_factor))
+            if hasattr(self, 'zoom_label2'):
+                self.zoom_label2.config(text=f"{self.zoom_level2:.1f}x")
+        
+        self.render_comparison()
+    
+    def start_pan(self, canvas_num: int, event):
+        """Start panning on canvas"""
+        if canvas_num == 1:
+            self.pan_start_x1 = event.x
+            self.pan_start_y1 = event.y
+        else:
+            self.pan_start_x2 = event.x
+            self.pan_start_y2 = event.y
+    
+    def pan_canvas(self, canvas_num: int, event):
+        """Pan canvas"""
+        if canvas_num == 1:
+            dx = event.x - self.pan_start_x1
+            dy = event.y - self.pan_start_y1
+            self.pan_x1 += dx
+            self.pan_y1 += dy
+            self.pan_start_x1 = event.x
+            self.pan_start_y1 = event.y
+        else:
+            dx = event.x - self.pan_start_x2
+            dy = event.y - self.pan_start_y2
+            self.pan_x2 += dx
+            self.pan_y2 += dy
+            self.pan_start_x2 = event.x
+            self.pan_start_y2 = event.y
+        
+        self.render_comparison()
+    
+    def stop_pan(self, canvas_num: int):
+        """Stop panning"""
+        pass
+    
+    def close_comparison_mode(self):
+        """Close comparison mode"""
+        self.comparison_mode = False
+        if hasattr(self, 'comparison_window') and self.comparison_window:
+            try:
+                self.comparison_window.destroy()
+            except:
+                pass
+            self.comparison_window = None
+        self.update_display()
+    
     def cleanup(self):
         if self.play_after_id:
             self.viewer.root.after_cancel(self.play_after_id)
         self.is_playing = False
         self.stop_buffer_thread()
         self.stop_file_watching()
+        
+        # Close comparison window if open
+        if hasattr(self, 'comparison_window') and self.comparison_window:
+            try:
+                self.comparison_window.destroy()
+            except:
+                pass
+        
+        # Close event timeline viewer if open
+        if self.event_timeline_viewer and hasattr(self.event_timeline_viewer, 'window'):
+            try:
+                if self.event_timeline_viewer.window.winfo_exists():
+                    self.event_timeline_viewer.window.destroy()
+            except:
+                pass
