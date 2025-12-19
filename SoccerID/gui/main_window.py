@@ -2338,27 +2338,6 @@ Playback Viewer:
         """Open player gallery seeder for cross-video player recognition"""
         # Use unified viewer in gallery mode
         self.open_unified_viewer(mode='gallery')
-            
-            # Get video path if available
-            video_path = None
-            if hasattr(self, 'input_file') and self.input_file.get():
-                video_path = self.input_file.get()
-                if not os.path.exists(video_path):
-                    video_path = None
-            
-            # Create seeder instance
-            app = PlayerGallerySeeder(seeder_window, video_path=video_path)
-            
-        except ImportError as e:
-            messagebox.showerror("Error", 
-                               f"Could not import player_gallery_seeder: {str(e)}\n\n"
-                               "Make sure player_gallery_seeder.py is available.")
-            import traceback
-            traceback.print_exc()
-        except Exception as e:
-            messagebox.showerror("Error", f"Could not open gallery seeder: {str(e)}")
-            import traceback
-            traceback.print_exc()
     
     def open_track_converter(self):
         """Open track converter to convert CSV tags to anchor frames"""

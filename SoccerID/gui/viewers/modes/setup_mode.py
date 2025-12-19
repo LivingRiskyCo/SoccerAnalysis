@@ -4,7 +4,7 @@ Migrated from SetupWizard with full features
 """
 
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, filedialog
 import cv2
 import numpy as np
 from PIL import Image, ImageTk
@@ -54,6 +54,20 @@ class SetupMode(BaseMode):
         self.player_tag_protection = {}  # player_name -> (frame_num, track_id)
         self.tag_protection_frames = 2
         
+        # Ball verification
+        self.ball_positions = []  # List of (frame_num, x, y) tuples
+        self.ball_click_mode = False
+        
+        # Manual detection drawing
+        self.drawing_box = False
+        self.box_start = None
+        self.box_end = None
+        self.manual_detections = []  # List of manually drawn boxes
+        
+        # Player roster
+        self.player_roster = {}  # player_name -> {active: bool, team: str, ...}
+        self.roster_manager = None
+        
         # Load player names and team colors
         self.load_player_name_list()
         self.load_team_colors()
@@ -78,7 +92,10 @@ class SetupMode(BaseMode):
         self.canvas = tk.Canvas(video_container, bg='black', cursor='crosshair')
         self.canvas.pack(fill=tk.BOTH, expand=True)
         self.canvas.bind('<Button-1>', self.on_canvas_click)
+        self.canvas.bind('<B1-Motion>', self.on_canvas_drag)
+        self.canvas.bind('<ButtonRelease-1>', self.on_canvas_release)
         self.canvas.bind('<Motion>', self.on_canvas_motion)
+        self.canvas.bind('<Button-3>', self.on_canvas_right_click)  # Right-click for ball marking
         
         # Controls panel
         controls_frame = ttk.Frame(main_frame, width=450)
@@ -106,6 +123,31 @@ class SetupMode(BaseMode):
         frame_spin.bind('<Return>', lambda e: self.goto_frame())
         frame_spin.bind('<FocusOut>', lambda e: self.goto_frame())
         
+        # Quick Tag section
+        quick_tag_frame = ttk.LabelFrame(controls_frame, text="Quick Tag", padding=5)
+        quick_tag_frame.pack(fill=tk.X, pady=5)
+        
+        quick_tag_inner = ttk.Frame(quick_tag_frame)
+        quick_tag_inner.pack(fill=tk.X)
+        
+        ttk.Label(quick_tag_inner, text="Player:").pack(side=tk.LEFT, padx=2)
+        self.quick_tag_player_var = tk.StringVar()
+        active_players = [name for name in self.player_name_list if self.is_player_active(name)]
+        self.quick_tag_player_combo = ttk.Combobox(quick_tag_inner, textvariable=self.quick_tag_player_var,
+                                                  width=18, values=active_players, state="readonly")
+        self.quick_tag_player_combo.pack(side=tk.LEFT, padx=2)
+        self.quick_tag_player_combo.bind("<<ComboboxSelected>>", self.on_quick_tag_player_select)
+        
+        ttk.Label(quick_tag_inner, text="Team:").pack(side=tk.LEFT, padx=2)
+        self.quick_tag_team_var = tk.StringVar()
+        team_names = self.get_team_names()
+        team_names_with_blank = [""] + team_names
+        self.quick_tag_team_combo = ttk.Combobox(quick_tag_inner, textvariable=self.quick_tag_team_var,
+                                                width=12, values=team_names_with_blank)
+        self.quick_tag_team_combo.pack(side=tk.LEFT, padx=2)
+        
+        ttk.Button(quick_tag_frame, text="Apply Quick Tag", command=self.apply_quick_tag).pack(fill=tk.X, pady=2)
+        
         # Detection controls
         detect_frame = ttk.LabelFrame(controls_frame, text="Detection", padding=5)
         detect_frame.pack(fill=tk.X, pady=5)
@@ -113,6 +155,24 @@ class SetupMode(BaseMode):
         self.init_button = ttk.Button(detect_frame, text="Initialize Detection", 
                                       command=self.initialize_detection)
         self.init_button.pack(fill=tk.X, pady=2)
+        
+        ttk.Button(detect_frame, text="Draw Manual Box", command=self.enable_manual_drawing).pack(fill=tk.X, pady=2)
+        
+        # Ball verification controls
+        ball_frame = ttk.LabelFrame(controls_frame, text="Ball Verification", padding=5)
+        ball_frame.pack(fill=tk.X, pady=5)
+        
+        self.ball_click_button = ttk.Button(ball_frame, text="⚽ Mark Ball (B key)", 
+                                           command=self.enable_ball_click)
+        self.ball_click_button.pack(fill=tk.X, pady=2)
+        
+        ttk.Button(ball_frame, text="Remove Ball from Frame", 
+                  command=self.remove_ball_from_frame).pack(fill=tk.X, pady=2)
+        ttk.Button(ball_frame, text="Manage Ball Positions", 
+                  command=self.manage_ball_positions).pack(fill=tk.X, pady=2)
+        
+        self.ball_count_label = ttk.Label(ball_frame, text="Ball positions: 0", foreground="gray")
+        self.ball_count_label.pack(fill=tk.X, pady=2)
         
         # Tagging controls
         tag_frame = ttk.LabelFrame(controls_frame, text="Tagging", padding=5)
@@ -168,23 +228,44 @@ class SetupMode(BaseMode):
         self.status_label = ttk.Label(controls_frame, text="Ready - Load video and initialize detection")
         self.status_label.pack(fill=tk.X, pady=5)
         
-        # Save button
+        # Save/Load buttons
         save_frame = ttk.Frame(controls_frame)
         save_frame.pack(fill=tk.X, pady=5)
         ttk.Button(save_frame, text="Save Tags", command=self.save_tags).pack(fill=tk.X, pady=2)
+        ttk.Button(save_frame, text="Import Seed Config", command=self.import_seed_config).pack(fill=tk.X, pady=2)
+        
+        # Bind keyboard shortcuts
+        self.canvas.focus_set()
+        self.canvas.bind('<KeyPress-b>', lambda e: self.enable_ball_click())
+        self.canvas.bind('<KeyPress-t>', lambda e: self.tag_player() if self.selected_detection is not None else None)
+        
+        # Update quick tag dropdown
+        self.update_quick_tag_dropdown()
+    
+    # ==================== DISPLAY METHODS ====================
     
     def display_frame(self, frame: np.ndarray, frame_num: int):
-        """Display a frame with detections"""
+        """Display a frame with detections, ball positions, and manual boxes"""
         if frame is None:
             return
         
         self.current_frame = frame.copy()
+        display_frame = frame.copy()
+        
+        # Draw ball positions for this frame
+        for ball_frame, ball_x, ball_y in self.ball_positions:
+            if ball_frame == frame_num:
+                cv2.circle(display_frame, (int(ball_x), int(ball_y)), 10, (0, 0, 255), 3)
+                cv2.circle(display_frame, (int(ball_x), int(ball_y)), 12, (255, 255, 255), 1)
+        
+        # Draw manual detection boxes
+        for manual_box in self.manual_detections:
+            if manual_box.get('frame') == frame_num:
+                x1, y1, x2, y2 = manual_box['bbox']
+                cv2.rectangle(display_frame, (int(x1), int(y1)), (int(x2), int(y2)), (255, 0, 255), 2)
         
         # Get detections for this frame
         detections = self.detection_manager.get_detections(frame_num)
-        
-        # Draw frame
-        display_frame = frame.copy()
         
         if detections is not None and len(detections) > 0:
             # Extract Re-ID features if available
@@ -237,12 +318,19 @@ class SetupMode(BaseMode):
                         cv2.putText(display_frame, f"#{track_id}", (x1, y1 - 10),
                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
         
+        # Draw box being drawn
+        if self.drawing_box and self.box_start and self.box_end:
+            x1, y1 = map(int, self.box_start)
+            x2, y2 = map(int, self.box_end)
+            cv2.rectangle(display_frame, (x1, y1), (x2, y2), (255, 0, 255), 2)
+        
         # Convert to PhotoImage and display
         self._display_image(display_frame)
         
         # Update detections list
         self.update_detections_list(detections)
         self.update_summary()
+        self.update_ball_count()
     
     def _display_image(self, frame: np.ndarray):
         """Display image on canvas"""
@@ -283,9 +371,45 @@ class SetupMode(BaseMode):
         self.display_offset_x = (canvas_width - new_width) // 2
         self.display_offset_y = (canvas_height - new_height) // 2
     
+    # ==================== CANVAS EVENT HANDLERS ====================
+    
     def on_canvas_click(self, event):
-        """Handle canvas click to select detection"""
-        if not self.current_frame is None:
+        """Handle canvas click - ball marking or detection selection"""
+        if self.ball_click_mode:
+            # Ball marking mode
+            canvas_x = event.x
+            canvas_y = event.y
+            
+            # Convert to frame coordinates
+            frame_x = (canvas_x - self.display_offset_x) / self.display_scale
+            frame_y = (canvas_y - self.display_offset_y) / self.display_scale
+            
+            # Clamp to frame bounds
+            if self.current_frame is not None:
+                frame_x = max(0, min(frame_x, self.current_frame.shape[1]))
+                frame_y = max(0, min(frame_y, self.current_frame.shape[0]))
+                
+                # Remove existing ball for this frame
+                self.ball_positions = [(f, x, y) for f, x, y in self.ball_positions 
+                                      if f != self.viewer.current_frame_num]
+                
+                # Add new ball position
+                self.ball_positions.append((self.viewer.current_frame_num, frame_x, frame_y))
+                self.update_ball_count()
+                self.update_display()
+                self.ball_click_mode = False
+                self.ball_click_button.config(text="⚽ Mark Ball (B key)", state=tk.NORMAL)
+                self.canvas.config(cursor='crosshair')
+                self.status_label.config(text=f"✓ Ball marked at ({frame_x:.0f}, {frame_y:.0f})")
+            return
+        
+        # Normal click - select detection or start drawing box
+        if self.drawing_box:
+            self.box_start = (event.x, event.y)
+            return
+        
+        # Select detection
+        if self.current_frame is not None:
             # Convert canvas coordinates to frame coordinates
             canvas_x = event.x
             canvas_y = event.y
@@ -324,9 +448,376 @@ class SetupMode(BaseMode):
                     self.on_detection_select(None)
                     self.update_display()
     
+    def on_canvas_drag(self, event):
+        """Handle canvas drag - update box being drawn"""
+        if self.drawing_box and self.box_start:
+            self.box_end = (event.x, event.y)
+            self.update_display()
+    
+    def on_canvas_release(self, event):
+        """Handle canvas release - finish box"""
+        if self.drawing_box and self.box_start and self.box_end:
+            # Convert canvas coordinates to frame coordinates
+            x1 = min(self.box_start[0], self.box_end[0])
+            y1 = min(self.box_start[1], self.box_end[1])
+            x2 = max(self.box_start[0], self.box_end[0])
+            y2 = max(self.box_start[1], self.box_end[1])
+            
+            # Convert to frame coordinates
+            frame_x1 = (x1 - self.display_offset_x) / self.display_scale
+            frame_y1 = (y1 - self.display_offset_y) / self.display_scale
+            frame_x2 = (x2 - self.display_offset_x) / self.display_scale
+            frame_y2 = (y2 - self.display_offset_y) / self.display_scale
+            
+            # Clamp to frame bounds
+            if self.current_frame is not None:
+                frame_x1 = max(0, min(frame_x1, self.current_frame.shape[1]))
+                frame_y1 = max(0, min(frame_y1, self.current_frame.shape[0]))
+                frame_x2 = max(0, min(frame_x2, self.current_frame.shape[1]))
+                frame_y2 = max(0, min(frame_y2, self.current_frame.shape[0]))
+                
+                if (frame_x2 - frame_x1) > 20 and (frame_y2 - frame_y1) > 20:
+                    # Add manual detection
+                    self.manual_detections.append({
+                        'frame': self.viewer.current_frame_num,
+                        'bbox': (frame_x1, frame_y1, frame_x2, frame_y2)
+                    })
+                    self.status_label.config(text=f"✓ Manual box added: {int(frame_x2-frame_x1)}x{int(frame_y2-frame_y1)}")
+            
+            self.drawing_box = False
+            self.box_start = None
+            self.box_end = None
+            self.update_display()
+    
     def on_canvas_motion(self, event):
         """Handle canvas mouse motion"""
         pass
+    
+    def on_canvas_right_click(self, event):
+        """Handle right-click - enable ball marking"""
+        self.enable_ball_click()
+    
+    # ==================== BALL VERIFICATION ====================
+    
+    def enable_ball_click(self):
+        """Enable ball marking mode"""
+        self.ball_click_mode = True
+        self.ball_click_button.config(text="⚽ Click Canvas to Mark", state=tk.DISABLED)
+        self.canvas.config(cursor="plus")
+        self.status_label.config(text="← Click on the ball in the video frame", 
+                                foreground="orange")
+    
+    def remove_ball_from_frame(self):
+        """Remove ball position from current frame"""
+        initial_count = len(self.ball_positions)
+        self.ball_positions = [(f, x, y) for f, x, y in self.ball_positions 
+                              if f != self.viewer.current_frame_num]
+        removed = initial_count - len(self.ball_positions)
+        
+        if removed > 0:
+            self.update_display()
+            self.update_summary()
+            self.update_ball_count()
+            messagebox.showinfo("Removed", f"Removed {removed} ball position(s) from frame {self.viewer.current_frame_num + 1}")
+        else:
+            messagebox.showinfo("Info", "No ball position found in current frame")
+    
+    def update_ball_count(self):
+        """Update the ball count label for current frame"""
+        if not hasattr(self, 'ball_count_label'):
+            return
+        ball_count = sum(1 for f, x, y in self.ball_positions if f == self.viewer.current_frame_num)
+        total_count = len(self.ball_positions)
+        if ball_count > 0:
+            self.ball_count_label.config(text=f"Ball positions: {ball_count} (this frame) | {total_count} total", 
+                                       foreground="green")
+        else:
+            self.ball_count_label.config(text=f"Ball positions: {total_count} total (none in this frame)", 
+                                       foreground="gray")
+    
+    def manage_ball_positions(self):
+        """Open dialog to manage all ball positions (view, edit, delete)"""
+        dialog = tk.Toplevel(self.viewer.root)
+        dialog.title("Manage Ball Positions")
+        dialog.geometry("800x700")
+        dialog.transient(self.viewer.root)
+        
+        # Header
+        header_frame = ttk.Frame(dialog, padding="10")
+        header_frame.pack(fill=tk.X)
+        ttk.Label(header_frame, text="Ball Position Manager", 
+                 font=("Arial", 12, "bold")).pack()
+        ttk.Label(header_frame, text=f"Total ball positions: {len(self.ball_positions)}", 
+                 font=("Arial", 9), foreground="gray").pack()
+        
+        # List of ball positions
+        list_frame = ttk.LabelFrame(dialog, text="All Ball Positions", padding="10")
+        list_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+        
+        # Treeview for ball positions
+        columns = ("Frame", "X", "Y", "Actions")
+        tree = ttk.Treeview(list_frame, columns=columns, show="headings", height=20)
+        tree.heading("Frame", text="Frame #")
+        tree.heading("X", text="X Position")
+        tree.heading("Y", text="Y Position")
+        tree.heading("Actions", text="Actions")
+        tree.column("Frame", width=100)
+        tree.column("X", width=120)
+        tree.column("Y", width=120)
+        tree.column("Actions", width=200)
+        
+        # Scrollbar
+        scrollbar = ttk.Scrollbar(list_frame, orient=tk.VERTICAL, command=tree.yview)
+        tree.configure(yscrollcommand=scrollbar.set)
+        
+        tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        # Populate tree
+        def refresh_tree():
+            tree.delete(*tree.get_children())
+            sorted_balls = sorted(self.ball_positions, key=lambda b: b[0])
+            for frame_num, x, y in sorted_balls:
+                tree.insert("", tk.END, values=(frame_num + 1, f"{x:.1f}", f"{y:.1f}", "Edit | Delete"),
+                           tags=(frame_num,))
+        
+        refresh_tree()
+        
+        # Action buttons
+        button_frame = ttk.Frame(dialog)
+        button_frame.pack(fill=tk.X, padx=10, pady=5)
+        
+        def edit_selected():
+            selection = tree.selection()
+            if not selection:
+                messagebox.showwarning("No Selection", "Please select a ball position to edit")
+                return
+            
+            item = tree.item(selection[0])
+            frame_num = item['tags'][0]
+            
+            # Find the ball position
+            ball_idx = None
+            for i, (f, bx, by) in enumerate(self.ball_positions):
+                if f == frame_num:
+                    ball_idx = i
+                    break
+            
+            if ball_idx is None:
+                return
+            
+            # Open edit dialog
+            edit_dialog = tk.Toplevel(dialog)
+            edit_dialog.title("Edit Ball Position")
+            edit_dialog.geometry("400x300")
+            edit_dialog.transient(dialog)
+            
+            ttk.Label(edit_dialog, text=f"Editing ball position at Frame {frame_num + 1}", 
+                     font=("Arial", 10, "bold")).pack(pady=10)
+            
+            # Frame number
+            frame_frame = ttk.Frame(edit_dialog)
+            frame_frame.pack(fill=tk.X, padx=20, pady=5)
+            ttk.Label(frame_frame, text="Frame Number:").pack(side=tk.LEFT)
+            frame_var = tk.IntVar(value=frame_num)
+            frame_spin = ttk.Spinbox(frame_frame, from_=0, to=max(0, self.video_manager.total_frames - 1), 
+                                    textvariable=frame_var, width=10)
+            frame_spin.pack(side=tk.LEFT, padx=5)
+            ttk.Button(frame_frame, text="Go to Frame", 
+                      command=lambda: self.jump_to_frame_and_close(frame_var.get(), edit_dialog)).pack(side=tk.LEFT, padx=5)
+            
+            # X position
+            x_frame = ttk.Frame(edit_dialog)
+            x_frame.pack(fill=tk.X, padx=20, pady=5)
+            ttk.Label(x_frame, text="X Position:").pack(side=tk.LEFT)
+            x_var = tk.DoubleVar(value=self.ball_positions[ball_idx][1])
+            x_spin = ttk.Spinbox(x_frame, from_=0, to=self.video_manager.width if hasattr(self.video_manager, 'width') else 1920, 
+                                textvariable=x_var, width=15, format="%.1f")
+            x_spin.pack(side=tk.LEFT, padx=5)
+            
+            # Y position
+            y_frame = ttk.Frame(edit_dialog)
+            y_frame.pack(fill=tk.X, padx=20, pady=5)
+            ttk.Label(y_frame, text="Y Position:").pack(side=tk.LEFT)
+            y_var = tk.DoubleVar(value=self.ball_positions[ball_idx][2])
+            y_spin = ttk.Spinbox(y_frame, from_=0, to=self.video_manager.height if hasattr(self.video_manager, 'height') else 1080, 
+                                textvariable=y_var, width=15, format="%.1f")
+            y_spin.pack(side=tk.LEFT, padx=5)
+            
+            def save_edit():
+                new_frame = frame_var.get()
+                new_x = x_var.get()
+                new_y = y_var.get()
+                
+                # Remove old position
+                self.ball_positions.pop(ball_idx)
+                
+                # Add new position
+                self.ball_positions.append((new_frame, new_x, new_y))
+                
+                refresh_tree()
+                self.update_display()
+                self.update_summary()
+                self.update_ball_count()
+                edit_dialog.destroy()
+                messagebox.showinfo("Updated", f"Ball position updated:\nFrame {new_frame + 1}\n({new_x:.1f}, {new_y:.1f})")
+            
+            ttk.Button(edit_dialog, text="Save Changes", command=save_edit).pack(pady=10)
+            ttk.Button(edit_dialog, text="Cancel", command=edit_dialog.destroy).pack()
+        
+        def delete_selected():
+            selection = tree.selection()
+            if not selection:
+                messagebox.showwarning("No Selection", "Please select a ball position to delete")
+                return
+            
+            item = tree.item(selection[0])
+            frame_num = item['tags'][0]
+            
+            response = messagebox.askyesno("Confirm Delete", 
+                f"Delete ball position at Frame {frame_num + 1}?")
+            if response:
+                self.ball_positions = [(f, x, y) for f, x, y in self.ball_positions if f != frame_num]
+                refresh_tree()
+                self.update_display()
+                self.update_summary()
+                self.update_ball_count()
+                messagebox.showinfo("Deleted", f"Ball position at Frame {frame_num + 1} deleted")
+        
+        def jump_to_frame():
+            selection = tree.selection()
+            if not selection:
+                messagebox.showwarning("No Selection", "Please select a ball position")
+                return
+            
+            item = tree.item(selection[0])
+            frame_num = item['tags'][0]
+            self.jump_to_frame_and_close(frame_num, dialog)
+        
+        tree.bind("<Double-1>", lambda e: edit_selected())
+        
+        ttk.Button(button_frame, text="Edit Selected", command=edit_selected).pack(side=tk.LEFT, padx=5)
+        ttk.Button(button_frame, text="Delete Selected", command=delete_selected).pack(side=tk.LEFT, padx=5)
+        ttk.Button(button_frame, text="Jump to Frame", command=jump_to_frame).pack(side=tk.LEFT, padx=5)
+        ttk.Button(button_frame, text="Close", command=dialog.destroy).pack(side=tk.RIGHT, padx=5)
+    
+    def jump_to_frame_and_close(self, frame_num, dialog):
+        """Jump to a specific frame and close dialog"""
+        if 0 <= frame_num < self.video_manager.total_frames:
+            self.goto_frame(frame_num)
+            dialog.destroy()
+        else:
+            messagebox.showerror("Invalid Frame", f"Frame {frame_num + 1} is out of range")
+    
+    # ==================== QUICK TAG ====================
+    
+    def update_quick_tag_dropdown(self):
+        """Update the quick tag player dropdown to show only active players"""
+        if not hasattr(self, 'quick_tag_player_combo') or not self.quick_tag_player_combo:
+            return
+        
+        try:
+            current_selection = self.quick_tag_player_var.get()
+            active_player_list = [name for name in self.player_name_list if self.is_player_active(name)]
+            self.quick_tag_player_combo['values'] = active_player_list
+            
+            if current_selection in active_player_list:
+                self.quick_tag_player_var.set(current_selection)
+            else:
+                self.quick_tag_player_var.set("")
+        except Exception as e:
+            print(f"⚠ Error updating quick tag dropdown: {e}")
+    
+    def is_player_active(self, player_name):
+        """Check if a player is active in the roster"""
+        if hasattr(self, 'player_roster') and self.player_roster:
+            if player_name in self.player_roster:
+                player_data = self.player_roster[player_name]
+                if isinstance(player_data, dict):
+                    return player_data.get('active', True)
+                return True
+        
+        # Fallback to global roster manager
+        if not hasattr(self, 'roster_manager') or self.roster_manager is None:
+            try:
+                current_file = Path(__file__).resolve()
+                parent_dir = current_file.parent.parent.parent.parent
+                roster_path = os.path.join(parent_dir, 'team_roster_manager.py')
+                if os.path.exists(roster_path):
+                    import importlib.util
+                    spec = importlib.util.spec_from_file_location("team_roster_manager", roster_path)
+                    roster_module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(roster_module)
+                    TeamRosterManager = roster_module.TeamRosterManager
+                    self.roster_manager = TeamRosterManager()
+                else:
+                    from team_roster_manager import TeamRosterManager
+                    self.roster_manager = TeamRosterManager()
+            except:
+                return True  # Default to active if roster unavailable
+        
+        if not self.roster_manager:
+            return True
+        
+        roster = self.roster_manager.roster if hasattr(self.roster_manager, 'roster') else {}
+        if player_name in roster:
+            return roster[player_name].get('active', True)
+        return True  # Default to active if player not in roster
+    
+    def on_quick_tag_player_select(self, event):
+        """Handle quick tag player selection - auto-fill team"""
+        player_name = self.quick_tag_player_var.get()
+        if not player_name:
+            return
+        
+        # Try to get team from roster
+        if player_name in self.player_roster:
+            roster_entry = self.player_roster[player_name]
+            if roster_entry.get("team") and hasattr(self, 'quick_tag_team_combo'):
+                self.quick_tag_team_var.set(roster_entry["team"])
+            return
+        
+        # Fall back to approved_mappings
+        mappings = self.viewer.get_approved_mappings()
+        for pid_str, mapping in mappings.items():
+            if isinstance(mapping, tuple) and len(mapping) >= 2:
+                if mapping[0] == player_name and mapping[1]:
+                    if hasattr(self, 'quick_tag_team_combo'):
+                        self.quick_tag_team_var.set(mapping[1])
+                    return
+    
+    def apply_quick_tag(self):
+        """Apply quick tag from quick tag section to selected detection"""
+        if self.selected_detection is None:
+            messagebox.showwarning("Warning", "Please select a detection first")
+            return
+        
+        player_name = self.quick_tag_player_var.get().strip()
+        if not player_name:
+            messagebox.showwarning("Warning", "Please select a player name")
+            return
+        
+        # Set the player name and team in the tag player section
+        self.player_name_var.set(player_name)
+        team = self.quick_tag_team_var.get().strip()
+        self.team_var.set(team)
+        
+        # Tag the player
+        self.tag_player()
+        
+        # Clear quick tag fields
+        self.quick_tag_player_var.set("")
+        self.quick_tag_team_var.set("")
+    
+    # ==================== MANUAL DETECTION DRAWING ====================
+    
+    def enable_manual_drawing(self):
+        """Enable manual box drawing mode"""
+        self.drawing_box = True
+        self.canvas.config(cursor="crosshair")
+        self.status_label.config(text="← Click and drag to draw a box around a player")
+    
+    # ==================== DETECTION AND MATCHING ====================
     
     def initialize_detection(self):
         """Initialize YOLO detection"""
@@ -423,6 +914,8 @@ class SetupMode(BaseMode):
                 if confidence >= 0.6:  # Suggestion threshold
                     self.gallery_suggestions[track_id] = (player_name, confidence)
     
+    # ==================== TAGGING ====================
+    
     def tag_player(self):
         """Tag selected detection with player name"""
         if self.selected_detection is None:
@@ -452,6 +945,7 @@ class SetupMode(BaseMode):
             self.player_name_list.sort()
             self.player_name_combo['values'] = self.player_name_list
             self.save_player_name_list()
+            self.update_quick_tag_dropdown()
         
         team = self.team_var.get().strip()
         jersey_number = self.jersey_number_var.get().strip()
@@ -617,9 +1111,152 @@ class SetupMode(BaseMode):
         """Update summary label"""
         mappings = self.viewer.get_approved_mappings()
         anchor_count = self.anchor_manager.count_anchors()
+        ball_count = len(self.ball_positions)
         
-        summary = f"Tagged: {len(mappings)} players, {anchor_count} anchor frames"
+        summary = f"Tagged: {len(mappings)} players, {anchor_count} anchor frames, {ball_count} ball positions"
         self.summary_label.config(text=summary)
+    
+    # ==================== SEED CONFIG LOAD/SAVE ====================
+    
+    def auto_load_seed_data(self):
+        """Auto-load ball positions and player mappings from seed config files"""
+        if not self.video_manager.video_path:
+            return
+        
+        # First, try to load from PlayerTagsSeed-{video_name}.json in video directory
+        video_dir = os.path.dirname(os.path.abspath(self.video_manager.video_path))
+        video_basename = os.path.splitext(os.path.basename(self.video_manager.video_path))[0]
+        seed_file_video = os.path.join(video_dir, f"PlayerTagsSeed-{video_basename}.json")
+        
+        seed_file_loaded = False
+        if os.path.exists(seed_file_video):
+            try:
+                with open(seed_file_video, 'r') as f:
+                    config = json.load(f)
+                    seed_file_loaded = self._load_seed_config_data(config, seed_file_video)
+                    if seed_file_loaded:
+                        print(f"✓ Loaded seed data from PlayerTagsSeed-{video_basename}.json")
+            except Exception as e:
+                print(f"Warning: Could not load PlayerTagsSeed file: {e}")
+        
+        # Try to load from seed_config.json if video-specific file not found
+        if not seed_file_loaded:
+            seed_file = "seed_config.json"
+            if os.path.exists(seed_file):
+                try:
+                    with open(seed_file, 'r') as f:
+                        config = json.load(f)
+                        if self._load_seed_config_data(config, seed_file):
+                            print(f"✓ Loaded seed data from seed_config.json")
+                except Exception as e:
+                    print(f"Warning: Could not auto-load seed config: {e}")
+    
+    def _load_seed_config_data(self, config, source_file=""):
+        """Helper method to load seed config data from a config dictionary"""
+        loaded_any = False
+        
+        # Check if this seed config is for the same video
+        config_video = config.get("video_path")
+        if config_video and os.path.exists(config_video):
+            if os.path.normpath(config_video) == os.path.normpath(self.video_manager.video_path):
+                # Load ball positions
+                ball_positions_raw = config.get("ball_positions", [])
+                loaded_balls = 0
+                for item in ball_positions_raw:
+                    if isinstance(item, (list, tuple)) and len(item) >= 3:
+                        try:
+                            frame_num = int(item[0])
+                            x = float(item[1])
+                            y = float(item[2])
+                            if not any(f == frame_num for f, _, _ in self.ball_positions):
+                                self.ball_positions.append((frame_num, x, y))
+                                loaded_balls += 1
+                        except (ValueError, TypeError, IndexError):
+                            pass
+                
+                if loaded_balls > 0:
+                    print(f"✓ Auto-loaded {loaded_balls} ball position(s)")
+                    self.update_ball_count()
+                    loaded_any = True
+                
+                # Load player roster
+                player_roster = config.get("player_roster", {})
+                if player_roster:
+                    self.player_roster = player_roster
+                    print(f"✓ Auto-loaded player roster with {len(self.player_roster)} players")
+                    loaded_any = True
+                    self.update_quick_tag_dropdown()
+                
+                # Load player mappings
+                player_mappings = config.get("player_mappings", {})
+                if player_mappings:
+                    loaded_mappings = 0
+                    for k, v in player_mappings.items():
+                        try:
+                            if isinstance(v, (list, tuple)) and len(v) >= 2:
+                                value = (str(v[0]) if v[0] is not None else "", 
+                                        str(v[1]) if v[1] is not None else "",
+                                        str(v[2]) if len(v) >= 3 and v[2] is not None else "")
+                            elif isinstance(v, (list, tuple)) and len(v) == 1:
+                                value = (str(v[0]) if v[0] is not None else "", "", "")
+                            elif isinstance(v, (str, int, float)):
+                                value = (str(v), "", "")
+                            else:
+                                continue
+                            self.viewer.approved_mappings[str(k)] = value
+                            loaded_mappings += 1
+                        except:
+                            pass
+                    
+                    if loaded_mappings > 0:
+                        print(f"✓ Auto-loaded {loaded_mappings} track ID mapping(s)")
+                        self.save_player_name_list()
+                        loaded_any = True
+                
+                # Load anchor frames via anchor_manager
+                anchor_frames = config.get("anchor_frames", {})
+                if anchor_frames:
+                    for frame_num_str, anchors in anchor_frames.items():
+                        try:
+                            frame_num = int(frame_num_str)
+                            for anchor in anchors:
+                                self.anchor_manager.add_anchor(
+                                    frame_num,
+                                    anchor.get('track_id', 0),
+                                    anchor.get('player_name', ''),
+                                    anchor.get('bbox', []),
+                                    anchor.get('team', ''),
+                                    anchor.get('jersey_number', '')
+                                )
+                        except:
+                            pass
+                    print(f"✓ Auto-loaded anchor frames")
+                    loaded_any = True
+        
+        return loaded_any
+    
+    def import_seed_config(self):
+        """Import seed config from file dialog"""
+        file_path = filedialog.askopenfilename(
+            title="Import Seed Config",
+            filetypes=[("JSON files", "*.json"), ("All files", "*.*")]
+        )
+        
+        if not file_path:
+            return
+        
+        try:
+            with open(file_path, 'r') as f:
+                config = json.load(f)
+            
+            if self._load_seed_config_data(config, file_path):
+                messagebox.showinfo("Success", f"Imported seed config from:\n{os.path.basename(file_path)}")
+                self.update_display()
+                self.update_summary()
+            else:
+                messagebox.showwarning("Warning", "Seed config loaded but no matching data found for this video")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to import seed config:\n{e}")
     
     def save_tags(self):
         """Save tags to seed config file"""
@@ -636,7 +1273,9 @@ class SetupMode(BaseMode):
             additional_data = {
                 "player_mappings": {k: list(v) for k, v in self.viewer.approved_mappings.items()},
                 "video_path": self.video_manager.video_path,
-                "current_frame": self.viewer.current_frame_num
+                "current_frame": self.viewer.current_frame_num,
+                "ball_positions": [[f, x, y] for f, x, y in self.ball_positions],
+                "player_roster": self.player_roster
             }
             
             if self.anchor_manager.save_to_seed_config(seed_file, additional_data):
@@ -646,6 +1285,34 @@ class SetupMode(BaseMode):
                 messagebox.showerror("Error", "Failed to save tags")
         except Exception as e:
             messagebox.showerror("Error", f"Failed to save tags: {e}")
+    
+    # ==================== CSV PRE-POPULATION ====================
+    
+    def pre_populate_from_csv(self):
+        """Pre-populate player tags from CSV data"""
+        if not self.csv_manager.is_loaded():
+            return
+        
+        # Get player assignments from CSV for current frame
+        frame_num = self.viewer.current_frame_num
+        player_data = self.csv_manager.get_player_data(frame_num)
+        
+        if not player_data:
+            return
+        
+        # Update mappings from CSV
+        for player_id, (x, y, team, name, bbox) in player_data.items():
+            if name and name.strip():
+                pid_str = str(int(player_id))
+                # Only update if not already tagged (CSV is fallback)
+                if pid_str not in self.viewer.approved_mappings:
+                    self.viewer.approved_mappings[pid_str] = (name, team or "", "")
+        
+        self.update_display()
+        self.update_detections_list(self.detection_manager.get_detections(frame_num))
+        self.update_summary()
+    
+    # ==================== UTILITY METHODS ====================
     
     def get_detection_color(self, track_id):
         """Get color for a detection based on track ID"""
@@ -700,12 +1367,16 @@ class SetupMode(BaseMode):
         """Get team names from team colors config"""
         if self.team_colors:
             teams = []
-            if 'team1' in self.team_colors:
-                teams.append(self.team_colors['team1'].get('name', 'Team 1'))
-            if 'team2' in self.team_colors:
-                teams.append(self.team_colors['team2'].get('name', 'Team 2'))
+            if 'team_colors' in self.team_colors:
+                team_colors = self.team_colors['team_colors']
+                if 'team1' in team_colors:
+                    teams.append(team_colors['team1'].get('name', 'Team 1'))
+                if 'team2' in team_colors:
+                    teams.append(team_colors['team2'].get('name', 'Team 2'))
             return teams
         return []
+    
+    # ==================== NAVIGATION ====================
     
     def first_frame(self):
         self.goto_frame(0)
@@ -741,17 +1412,23 @@ class SetupMode(BaseMode):
         if self.video_manager.total_frames > 0:
             self.frame_var.set(0)
             # Update spinbox range
-            spinbox = None
             for widget in self.parent_frame.winfo_children():
                 for child in widget.winfo_children():
                     if isinstance(child, ttk.Spinbox):
                         child.config(to=self.video_manager.total_frames - 1)
             self.load_frame(0)
             self.status_label.config(text=f"Video loaded: {self.video_manager.total_frames} frames")
+            
+            # Auto-load seed data
+            self.auto_load_seed_data()
+            
+            # Pre-populate from CSV if available
+            if self.csv_manager.is_loaded():
+                self.pre_populate_from_csv()
     
     def on_csv_loaded(self):
-        # Refresh display
-        self.load_frame(self.viewer.current_frame_num)
+        # Pre-populate tags from CSV
+        self.pre_populate_from_csv()
         self.status_label.config(text="CSV loaded - Player assignments applied")
     
     def cleanup(self):

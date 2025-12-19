@@ -26,13 +26,22 @@ def main():
     
     # Show splash screen first
     try:
-        from .utils.splash_screen import show_splash_screen
+        from SoccerID.utils.splash_screen import show_splash_screen
     except ImportError:
         try:
-            from SoccerID.utils.splash_screen import show_splash_screen
+            from utils.splash_screen import show_splash_screen
         except ImportError:
             try:
-                from SoccerID.utils.splash_screen import show_splash_screen
+                # Try from parent directory
+                parent_utils = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'soccer_analysis', 'utils', 'splash_screen.py')
+                if os.path.exists(parent_utils):
+                    import importlib.util
+                    spec = importlib.util.spec_from_file_location("splash_screen", parent_utils)
+                    splash_module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(splash_module)
+                    show_splash_screen = splash_module.show_splash_screen
+                else:
+                    show_splash_screen = None
             except ImportError:
                 show_splash_screen = None
     
