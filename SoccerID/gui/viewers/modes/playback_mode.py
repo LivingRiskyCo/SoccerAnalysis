@@ -91,13 +91,10 @@ class PlaybackMode(BaseMode):
         else:
             self.hd_renderer = None
         
-        # Event marker system
-        if EVENT_MARKER_AVAILABLE:
-            self.event_marker_system = EventMarkerSystem(video_path=self.video_manager.video_path)
-            self.event_marker_visible = tk.BooleanVar(value=True)
-            self.current_event_type = tk.StringVar(value="pass")
-        else:
-            self.event_marker_system = None
+        # Event marker system (initialize after super() to access video_manager)
+        self.event_marker_system = None
+        self.event_marker_visible = tk.BooleanVar(value=True)
+        self.current_event_type = tk.StringVar(value="pass")
         
         # Frame buffering
         self.frame_buffer = OrderedDict()
@@ -151,6 +148,14 @@ class PlaybackMode(BaseMode):
         
         # Load team colors after UI is created
         self.load_team_colors()
+        
+        # Initialize event marker system (now that video_manager is available)
+        if EVENT_MARKER_AVAILABLE and hasattr(self.video_manager, 'video_path') and self.video_manager.video_path:
+            try:
+                self.event_marker_system = EventMarkerSystem(video_path=self.video_manager.video_path)
+            except Exception as e:
+                print(f"Warning: Could not initialize EventMarkerSystem: {e}")
+                self.event_marker_system = None
         
         # Overlay metadata
         self.overlay_metadata = None
