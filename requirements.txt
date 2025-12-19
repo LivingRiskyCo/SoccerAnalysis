@@ -1,0 +1,29 @@
+opencv-python>=4.8.0
+ultralytics>=8.0.0
+defisheye>=0.1.0
+numpy>=1.24.0
+matplotlib>=3.7.0
+supervision>=0.16.0
+imutils>=0.5.4
+scikit-learn>=1.0.0
+torch>=2.0.0  # PyTorch for Re-ID and deep learning models
+pandas>=1.5.0  # For CSV analysis
+boxmot>=10.0.0  # For advanced tracking (ByteTrack, OC-SORT, etc.)
+torchreid>=0.2.0  # Optional: For Re-ID features (latest available version is 0.2.5)
+
+# Optional: Enhanced packages (mentioned in Grok chat)
+# SportsLabKit - Advanced tracking algorithms
+# pip install sportslabkit
+
+# soccer-cv - Soccer-specific visualization
+# pip install soccer-cv
+
+# databallpy - Soccer metrics framework
+# pip install databallpy
+
+# Optional: Data analysis packages (for CSV analysis)
+# pip install pandas seaborn jupyter notebook plotly
+
+# Optional: Video utilities
+# pip install moviepy
+
