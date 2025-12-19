@@ -136,6 +136,11 @@ class PlaybackMode(BaseMode):
         self.play_button = None
         self.canvas = None
         
+        # Window controls (needed in create_ui)
+        self.always_on_top = tk.BooleanVar(value=False)
+        self.is_maximized = False
+        self.is_fullscreen = False
+        
         # Now call super (which will call create_ui)
         super().__init__(parent_frame, viewer, video_manager, detection_manager,
                         reid_manager, gallery_manager, csv_manager, anchor_manager)
@@ -186,6 +191,10 @@ class PlaybackMode(BaseMode):
         self.is_panning = False
         self.pan_start_x = 0
         self.pan_start_y = 0
+        
+        # Window controls (needed in create_ui)
+        self.is_maximized = False
+        self.is_fullscreen = False
         
         # Window controls
         self.always_on_top = tk.BooleanVar(value=False)
