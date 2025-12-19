@@ -61,21 +61,12 @@ class PlaybackMode(BaseMode):
     def __init__(self, parent_frame, viewer, video_manager, detection_manager, 
                  reid_manager, gallery_manager, csv_manager, anchor_manager):
         # Initialize attributes BEFORE calling super (which calls create_ui)
-        # Initialize attributes BEFORE calling super (which calls create_ui)
         # Analytics data
         self.analytics_data = {}  # frame_num -> {player_id: {analytics_dict}}
         self.analytics_preferences = {}  # Will be loaded after UI creation
         
-        # Now call super (which will call create_ui)
-        super().__init__(parent_frame, viewer, video_manager, detection_manager,
-                        reid_manager, gallery_manager, csv_manager, anchor_manager)
-        
-        # Load analytics preferences after UI is created
-        self.analytics_preferences = self.load_analytics_preferences()
-        if hasattr(self, 'show_analytics'):
-            # Update show_analytics based on loaded preferences
-            has_selections = len([k for k, v in self.analytics_preferences.items() if v]) > 0
-            self.show_analytics.set(has_selections)
+        # Analytics UI variables (initialized before create_ui)
+        self.show_analytics = tk.BooleanVar(value=False)
         self.analytics_position = tk.StringVar(value="with_player")
         
         # Analytics font settings
@@ -125,7 +116,6 @@ class PlaybackMode(BaseMode):
         
         # Team colors
         self.team_colors = None
-        self.load_team_colors()
         
         # Player column mapping for consistent banner layout
         self._player_column_map = {}
@@ -136,6 +126,19 @@ class PlaybackMode(BaseMode):
         self.watch_csv_enabled = tk.BooleanVar(value=True)
         self.watch_thread = None
         self.watch_running = False
+        
+        # Now call super (which will call create_ui)
+        super().__init__(parent_frame, viewer, video_manager, detection_manager,
+                        reid_manager, gallery_manager, csv_manager, anchor_manager)
+        
+        # Load analytics preferences after UI is created
+        self.analytics_preferences = self.load_analytics_preferences()
+        # Update show_analytics based on loaded preferences
+        has_selections = len([k for k, v in self.analytics_preferences.items() if v]) > 0
+        self.show_analytics.set(has_selections)
+        
+        # Load team colors after UI is created
+        self.load_team_colors()
         
         # Overlay metadata
         self.overlay_metadata = None
