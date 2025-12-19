@@ -165,6 +165,14 @@ class PlaybackMode(BaseMode):
         self.use_overlay_metadata = tk.BooleanVar(value=False)
         self.overlay_render_mode = tk.StringVar(value="csv")
         
+        # Heatmaps (needed in create_ui)
+        self.show_heatmap = tk.BooleanVar(value=False)
+        self.heatmap_type = tk.StringVar(value="position")  # position, speed, acceleration, possession
+        self.heatmap_opacity = tk.DoubleVar(value=0.5)
+        self.heatmap_radius = tk.IntVar(value=30)
+        self.heatmap_player_id = tk.StringVar(value="all")  # "all" or specific player ID
+        self.heatmap_time_range = tk.IntVar(value=300)  # frames to include in heatmap
+        
         # Now call super (which will call create_ui)
         super().__init__(parent_frame, viewer, video_manager, detection_manager,
                         reid_manager, gallery_manager, csv_manager, anchor_manager)
@@ -221,14 +229,6 @@ class PlaybackMode(BaseMode):
         self.frame2_label = None
         self.zoom_label1 = None
         self.zoom_label2 = None
-        
-        # Heatmaps
-        self.show_heatmap = tk.BooleanVar(value=False)
-        self.heatmap_type = tk.StringVar(value="position")  # position, speed, acceleration
-        self.heatmap_opacity = tk.DoubleVar(value=0.5)
-        self.heatmap_radius = tk.IntVar(value=30)
-        self.heatmap_player_id = tk.StringVar(value="all")  # "all" or specific player ID
-        self.heatmap_time_range = tk.IntVar(value=300)  # frames to include in heatmap
         
         # Event timeline viewer
         self.event_timeline_viewer = None
