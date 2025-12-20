@@ -2252,11 +2252,26 @@ class PlaybackMode(BaseMode):
         self.update_display()
     
     def cleanup(self):
+        """Cleanup resources before mode switch or window close"""
+        # Stop playback first
         if self.play_after_id:
-            self.viewer.root.after_cancel(self.play_after_id)
+            try:
+                self.viewer.root.after_cancel(self.play_after_id)
+            except:
+                pass
+            self.play_after_id = None
+        
         self.is_playing = False
+        
+        # Stop buffer thread and wait for it to finish
         self.stop_buffer_thread()
+        
+        # Stop file watching
         self.stop_file_watching()
+        
+        # Clear frame buffer
+        with self.buffer_lock:
+            self.frame_buffer.clear()
         
         # Close comparison window if open
         if hasattr(self, 'comparison_window') and self.comparison_window:
