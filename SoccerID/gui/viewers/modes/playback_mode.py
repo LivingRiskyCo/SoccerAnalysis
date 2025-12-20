@@ -1259,18 +1259,22 @@ class PlaybackMode(BaseMode):
             
             while self.buffer_thread_running and self.video_manager.cap:
                 try:
-                    if not self.is_playing:
-                        time.sleep(0.1)
-                        continue
-                    
                     current_frame = self.viewer.current_frame_num
                     
                     # Buffer multiple frames ahead for smooth playback
                     frames_to_buffer = []
-                    for offset in range(1, self.buffer_read_ahead + 1):
-                        target_frame = current_frame + offset
-                        if target_frame < self.video_manager.total_frames:
-                            frames_to_buffer.append(target_frame)
+                    if self.is_playing:
+                        # When playing, buffer ahead more aggressively
+                        for offset in range(1, self.buffer_read_ahead + 1):
+                            target_frame = current_frame + offset
+                            if target_frame < self.video_manager.total_frames:
+                                frames_to_buffer.append(target_frame)
+                    else:
+                        # When not playing, still buffer nearby frames for smooth navigation
+                        for offset in range(1, min(self.buffer_read_ahead // 2, 30) + 1):
+                            target_frame = current_frame + offset
+                            if target_frame < self.video_manager.total_frames:
+                                frames_to_buffer.append(target_frame)
                     
                     # Also buffer some frames behind for rewind
                     for offset in range(1, min(30, current_frame) + 1):
@@ -1294,7 +1298,9 @@ class PlaybackMode(BaseMode):
                                 while len(self.frame_buffer) > self.buffer_max_size:
                                     self.frame_buffer.popitem(last=False)
                     
-                    time.sleep(0.01)
+                    # Sleep longer when not playing to reduce CPU usage
+                    sleep_time = 0.01 if self.is_playing else 0.05
+                    time.sleep(sleep_time)
                 except Exception as e:
                     # Log error but continue
                     time.sleep(0.1)
@@ -1375,6 +1381,11 @@ class PlaybackMode(BaseMode):
             self.goto_frame(0)
             if self.status_label is not None:
                 self.status_label.config(text=f"Video loaded: {self.video_manager.total_frames} frames")
+            
+            # Pre-buffer frames for smooth playback (even when not playing)
+            if not self.buffer_thread_running:
+                self.start_buffer_thread()
+            
             # Update buffer status
             if hasattr(self, '_update_buffer_status_label'):
                 self._update_buffer_status_label()
