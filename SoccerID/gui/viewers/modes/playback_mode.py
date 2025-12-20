@@ -536,9 +536,25 @@ class PlaybackMode(BaseMode):
     
     def _create_visualization_tab(self, parent):
         """Create Visualization tab content"""
+        # Create scrollable frame for all visualization options
+        canvas = tk.Canvas(parent, bg='white')
+        scrollbar = ttk.Scrollbar(parent, orient="vertical", command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
+        
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
         # Zoom/Pan controls
-        zoom_frame = ttk.LabelFrame(parent, text="Zoom & Pan", padding=5)
-        zoom_frame.pack(fill=tk.X, pady=5)
+        zoom_frame = ttk.LabelFrame(scrollable_frame, text="Zoom & Pan", padding=5)
+        zoom_frame.pack(fill=tk.X, pady=5, padx=5)
         
         zoom_buttons = ttk.Frame(zoom_frame)
         zoom_buttons.pack(fill=tk.X, pady=2)
@@ -552,10 +568,229 @@ class PlaybackMode(BaseMode):
         ttk.Label(zoom_frame, text="Right-click and drag to pan", 
                  font=("Arial", 8), foreground="gray").pack(pady=2)
         
+        # Player Visualization Style
+        style_frame = ttk.LabelFrame(scrollable_frame, text="Player Visualization Style", padding=5)
+        style_frame.pack(fill=tk.X, pady=5, padx=5)
+        
+        ttk.Label(style_frame, text="Style:").pack(anchor=tk.W)
+        style_combo = ttk.Combobox(style_frame, textvariable=self.player_viz_style,
+                                  values=["box", "circle"], state='readonly', width=20)
+        style_combo.pack(fill=tk.X, pady=2)
+        style_combo.bind('<<ComboboxSelected>>', lambda e: self.update_display())
+        
+        ttk.Label(style_frame, text="Graphics Style:").pack(anchor=tk.W, pady=(5, 0))
+        graphics_combo = ttk.Combobox(style_frame, textvariable=self.player_graphics_style,
+                                     values=["minimal", "standard", "broadcast"], state='readonly', width=20)
+        graphics_combo.pack(fill=tk.X, pady=2)
+        graphics_combo.bind('<<ComboboxSelected>>', lambda e: self.update_display())
+        
+        # Color Mode
+        color_frame = ttk.LabelFrame(scrollable_frame, text="Color Mode", padding=5)
+        color_frame.pack(fill=tk.X, pady=5, padx=5)
+        
+        ttk.Radiobutton(color_frame, text="Team Colors", variable=self.viz_color_mode, value="team",
+                       command=self.update_display).pack(anchor=tk.W)
+        ttk.Radiobutton(color_frame, text="Track ID Colors", variable=self.viz_color_mode, value="track",
+                       command=self.update_display).pack(anchor=tk.W)
+        ttk.Radiobutton(color_frame, text="Custom Color", variable=self.viz_color_mode, value="custom",
+                       command=self.update_display).pack(anchor=tk.W)
+        
+        # Custom Box Color (only shown when custom mode is selected)
+        custom_color_frame = ttk.Frame(color_frame)
+        custom_color_frame.pack(fill=tk.X, pady=2)
+        
+        ttk.Checkbutton(custom_color_frame, text="Use Custom Box Color", 
+                       variable=self.use_custom_box_color,
+                       command=self.update_display).pack(anchor=tk.W)
+        
+        color_rgb_frame = ttk.Frame(custom_color_frame)
+        color_rgb_frame.pack(fill=tk.X, pady=2)
+        
+        ttk.Label(color_rgb_frame, text="R:").pack(side=tk.LEFT, padx=2)
+        ttk.Spinbox(color_rgb_frame, from_=0, to=255, textvariable=self.box_color_r, width=6,
+                   command=self._sync_box_color).pack(side=tk.LEFT, padx=2)
+        ttk.Label(color_rgb_frame, text="G:").pack(side=tk.LEFT, padx=2)
+        ttk.Spinbox(color_rgb_frame, from_=0, to=255, textvariable=self.box_color_g, width=6,
+                   command=self._sync_box_color).pack(side=tk.LEFT, padx=2)
+        ttk.Label(color_rgb_frame, text="B:").pack(side=tk.LEFT, padx=2)
+        ttk.Spinbox(color_rgb_frame, from_=0, to=255, textvariable=self.box_color_b, width=6,
+                   command=self._sync_box_color).pack(side=tk.LEFT, padx=2)
+        
+        # Box Appearance
+        box_frame = ttk.LabelFrame(scrollable_frame, text="Box Appearance", padding=5)
+        box_frame.pack(fill=tk.X, pady=5, padx=5)
+        
+        ttk.Label(box_frame, text="Shrink Factor:").pack(anchor=tk.W)
+        shrink_spin = ttk.Spinbox(box_frame, from_=0.0, to=0.5, increment=0.05,
+                                 textvariable=self.box_shrink_factor, width=10, format="%.2f",
+                                 command=self.update_display)
+        shrink_spin.pack(fill=tk.X, pady=2)
+        
+        ttk.Label(box_frame, text="Thickness:").pack(anchor=tk.W, pady=(5, 0))
+        thickness_spin = ttk.Spinbox(box_frame, from_=1, to=10, increment=1,
+                                     textvariable=self.box_thickness, width=10,
+                                     command=self.update_display)
+        thickness_spin.pack(fill=tk.X, pady=2)
+        
+        ttk.Label(box_frame, text="Opacity (0-255):").pack(anchor=tk.W, pady=(5, 0))
+        opacity_spin = ttk.Spinbox(box_frame, from_=0, to=255, increment=5,
+                                  textvariable=self.player_viz_alpha, width=10,
+                                  command=self.update_display)
+        opacity_spin.pack(fill=tk.X, pady=2)
+        
+        # Feet Markers
+        feet_frame = ttk.LabelFrame(scrollable_frame, text="Feet Markers", padding=5)
+        feet_frame.pack(fill=tk.X, pady=5, padx=5)
+        
+        ttk.Label(feet_frame, text="Style:").pack(anchor=tk.W)
+        feet_style_combo = ttk.Combobox(feet_frame, textvariable=self.feet_marker_style,
+                                       values=["circle", "diamond", "star", "hexagon", "ring", "glow", "pulse"],
+                                       state='readonly', width=20)
+        feet_style_combo.pack(fill=tk.X, pady=2)
+        feet_style_combo.bind('<<ComboboxSelected>>', lambda e: self.update_display())
+        
+        ttk.Label(feet_frame, text="Opacity (0-255):").pack(anchor=tk.W, pady=(5, 0))
+        feet_opacity_spin = ttk.Spinbox(feet_frame, from_=0, to=255, increment=5,
+                                       textvariable=self.feet_marker_opacity, width=10,
+                                       command=self.update_display)
+        feet_opacity_spin.pack(fill=tk.X, pady=2)
+        
+        ttk.Checkbutton(feet_frame, text="Enable Glow", variable=self.feet_marker_enable_glow,
+                       command=self.update_display).pack(anchor=tk.W, pady=2)
+        
+        glow_frame = ttk.Frame(feet_frame)
+        glow_frame.pack(fill=tk.X, padx=20)
+        ttk.Label(glow_frame, text="Glow Intensity:").pack(side=tk.LEFT)
+        glow_intensity_spin = ttk.Spinbox(glow_frame, from_=0, to=100, increment=5,
+                                         textvariable=self.feet_marker_glow_intensity, width=8,
+                                         command=self.update_display)
+        glow_intensity_spin.pack(side=tk.LEFT, padx=2)
+        
+        ttk.Checkbutton(feet_frame, text="Enable Shadow", variable=self.feet_marker_enable_shadow,
+                       command=self.update_display).pack(anchor=tk.W, pady=2)
+        
+        shadow_frame = ttk.Frame(feet_frame)
+        shadow_frame.pack(fill=tk.X, padx=20)
+        ttk.Label(shadow_frame, text="Offset:").pack(side=tk.LEFT)
+        shadow_offset_spin = ttk.Spinbox(shadow_frame, from_=1, to=10, increment=1,
+                                        textvariable=self.feet_marker_shadow_offset, width=8,
+                                        command=self.update_display)
+        shadow_offset_spin.pack(side=tk.LEFT, padx=2)
+        ttk.Label(shadow_frame, text="Opacity:").pack(side=tk.LEFT, padx=(10, 0))
+        shadow_opacity_spin = ttk.Spinbox(shadow_frame, from_=0, to=255, increment=5,
+                                         textvariable=self.feet_marker_shadow_opacity, width=8,
+                                         command=self.update_display)
+        shadow_opacity_spin.pack(side=tk.LEFT, padx=2)
+        
+        ttk.Checkbutton(feet_frame, text="Enable Pulse", variable=self.feet_marker_enable_pulse,
+                       command=self.update_display).pack(anchor=tk.W, pady=2)
+        
+        pulse_frame = ttk.Frame(feet_frame)
+        pulse_frame.pack(fill=tk.X, padx=20)
+        ttk.Label(pulse_frame, text="Speed:").pack(side=tk.LEFT)
+        pulse_speed_spin = ttk.Spinbox(pulse_frame, from_=0.5, to=5.0, increment=0.5,
+                                      textvariable=self.feet_marker_pulse_speed, width=8, format="%.1f",
+                                      command=self.update_display)
+        pulse_speed_spin.pack(side=tk.LEFT, padx=2)
+        
+        ttk.Checkbutton(feet_frame, text="Enable Particles", variable=self.feet_marker_enable_particles,
+                       command=self.update_display).pack(anchor=tk.W, pady=2)
+        
+        particles_frame = ttk.Frame(feet_frame)
+        particles_frame.pack(fill=tk.X, padx=20)
+        ttk.Label(particles_frame, text="Count:").pack(side=tk.LEFT)
+        particles_count_spin = ttk.Spinbox(particles_frame, from_=1, to=20, increment=1,
+                                         textvariable=self.feet_marker_particle_count, width=8,
+                                         command=self.update_display)
+        particles_count_spin.pack(side=tk.LEFT, padx=2)
+        
+        ttk.Label(feet_frame, text="Vertical Offset:").pack(anchor=tk.W, pady=(5, 0))
+        feet_offset_spin = ttk.Spinbox(feet_frame, from_=-100, to=100, increment=5,
+                                      textvariable=self.feet_marker_vertical_offset, width=10,
+                                      command=self.update_display)
+        feet_offset_spin.pack(fill=tk.X, pady=2)
+        
+        # Ellipse Visualization
+        ellipse_frame = ttk.LabelFrame(scrollable_frame, text="Ellipse at Feet", padding=5)
+        ellipse_frame.pack(fill=tk.X, pady=5, padx=5)
+        
+        ttk.Label(ellipse_frame, text="Width:").pack(anchor=tk.W)
+        ellipse_w_spin = ttk.Spinbox(ellipse_frame, from_=0, to=50, increment=2,
+                                     textvariable=self.ellipse_width, width=10,
+                                     command=self.update_display)
+        ellipse_w_spin.pack(fill=tk.X, pady=2)
+        
+        ttk.Label(ellipse_frame, text="Height:").pack(anchor=tk.W, pady=(5, 0))
+        ellipse_h_spin = ttk.Spinbox(ellipse_frame, from_=0, to=50, increment=2,
+                                     textvariable=self.ellipse_height, width=10,
+                                     command=self.update_display)
+        ellipse_h_spin.pack(fill=tk.X, pady=2)
+        
+        ttk.Label(ellipse_frame, text="Outline Thickness:").pack(anchor=tk.W, pady=(5, 0))
+        ellipse_thickness_spin = ttk.Spinbox(ellipse_frame, from_=0, to=10, increment=1,
+                                             textvariable=self.ellipse_outline_thickness, width=10,
+                                             command=self.update_display)
+        ellipse_thickness_spin.pack(fill=tk.X, pady=2)
+        
+        # Label Customization
+        label_frame = ttk.LabelFrame(scrollable_frame, text="Label Customization", padding=5)
+        label_frame.pack(fill=tk.X, pady=5, padx=5)
+        
+        ttk.Label(label_frame, text="Label Type:").pack(anchor=tk.W)
+        label_type_combo = ttk.Combobox(label_frame, textvariable=self.label_type,
+                                       values=["full_name", "last_name", "jersey", "team", "custom"],
+                                       state='readonly', width=20)
+        label_type_combo.pack(fill=tk.X, pady=2)
+        label_type_combo.bind('<<ComboboxSelected>>', lambda e: self.update_display())
+        
+        ttk.Label(label_frame, text="Custom Text:").pack(anchor=tk.W, pady=(5, 0))
+        custom_text_entry = ttk.Entry(label_frame, textvariable=self.label_custom_text, width=20)
+        custom_text_entry.pack(fill=tk.X, pady=2)
+        custom_text_entry.bind('<KeyRelease>', lambda e: self.update_display())
+        
+        ttk.Label(label_frame, text="Font Scale:").pack(anchor=tk.W, pady=(5, 0))
+        label_font_scale_spin = ttk.Spinbox(label_frame, from_=0.3, to=2.0, increment=0.1,
+                                           textvariable=self.label_font_scale, width=10, format="%.1f",
+                                           command=self.update_display)
+        label_font_scale_spin.pack(fill=tk.X, pady=2)
+        
+        ttk.Label(label_frame, text="Font Face:").pack(anchor=tk.W, pady=(5, 0))
+        label_font_combo = ttk.Combobox(label_frame, textvariable=self.label_font_face,
+                                       values=["FONT_HERSHEY_SIMPLEX", "FONT_HERSHEY_PLAIN", "FONT_HERSHEY_DUPLEX",
+                                              "FONT_HERSHEY_COMPLEX", "FONT_HERSHEY_TRIPLEX", "FONT_HERSHEY_COMPLEX_SMALL"],
+                                       state='readonly', width=20)
+        label_font_combo.pack(fill=tk.X, pady=2)
+        label_font_combo.bind('<<ComboboxSelected>>', lambda e: self.update_display())
+        
+        ttk.Checkbutton(label_frame, text="Use Custom Label Color", 
+                       variable=self.use_custom_label_color,
+                       command=self.update_display).pack(anchor=tk.W, pady=2)
+        
+        label_color_rgb_frame = ttk.Frame(label_frame)
+        label_color_rgb_frame.pack(fill=tk.X, padx=20, pady=2)
+        
+        ttk.Label(label_color_rgb_frame, text="R:").pack(side=tk.LEFT, padx=2)
+        ttk.Spinbox(label_color_rgb_frame, from_=0, to=255, textvariable=self.label_color_r, width=6,
+                   command=self._sync_label_color).pack(side=tk.LEFT, padx=2)
+        ttk.Label(label_color_rgb_frame, text="G:").pack(side=tk.LEFT, padx=2)
+        ttk.Spinbox(label_color_rgb_frame, from_=0, to=255, textvariable=self.label_color_g, width=6,
+                   command=self._sync_label_color).pack(side=tk.LEFT, padx=2)
+        ttk.Label(label_color_rgb_frame, text="B:").pack(side=tk.LEFT, padx=2)
+        ttk.Spinbox(label_color_rgb_frame, from_=0, to=255, textvariable=self.label_color_b, width=6,
+                   command=self._sync_label_color).pack(side=tk.LEFT, padx=2)
+        
+        # Direction Arrow
+        arrow_frame = ttk.LabelFrame(scrollable_frame, text="Direction Arrow", padding=5)
+        arrow_frame.pack(fill=tk.X, pady=5, padx=5)
+        
+        ttk.Checkbutton(arrow_frame, text="Show Direction Arrow", 
+                       variable=self.show_direction_arrow,
+                       command=self.update_display).pack(anchor=tk.W)
+        
         # Event markers (if available)
         if EVENT_MARKER_AVAILABLE and self.event_marker_system:
-            marker_frame = ttk.LabelFrame(parent, text="Event Markers", padding=5)
-            marker_frame.pack(fill=tk.X, pady=5)
+            marker_frame = ttk.LabelFrame(scrollable_frame, text="Event Markers", padding=5)
+            marker_frame.pack(fill=tk.X, pady=5, padx=5)
             
             ttk.Checkbutton(marker_frame, text="Show Markers", 
                            variable=self.event_marker_visible,
