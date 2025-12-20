@@ -68,6 +68,17 @@ class GalleryMode(BaseMode):
         self.pan_start_x = 0
         self.pan_start_y = 0
         
+        # Playback state (needed in create_ui)
+        self.is_playing = False
+        self.play_after_id = None
+        self.playback_speed = 1.0
+        self.frame_var = None
+        self.frame_slider = None
+        self.frame_label = None
+        self.goto_frame_var = None
+        self.speed_var = None
+        self.play_button = None
+        
         # Now call super (which will call create_ui)
         super().__init__(parent_frame, viewer, video_manager, detection_manager,
                         reid_manager, gallery_manager, csv_manager, anchor_manager)
