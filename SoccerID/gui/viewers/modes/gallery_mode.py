@@ -685,18 +685,118 @@ class GalleryMode(BaseMode):
     def last_frame(self):
         self.goto_frame(self.video_manager.total_frames - 1)
     
-    def goto_frame(self, frame_num: int):
+    def goto_frame(self, frame_num=None):
+        """Go to a specific frame"""
+        if frame_num is None:
+            if self.frame_var is not None:
+                try:
+                    frame_num = self.frame_var.get()
+                except:
+                    frame_num = self.viewer.current_frame_num
+            elif self.goto_frame_var is not None:
+                try:
+                    frame_num = int(self.goto_frame_var.get())
+                except (ValueError, TypeError):
+                    frame_num = self.viewer.current_frame_num
+            else:
+                frame_num = self.viewer.current_frame_num
+        
+        frame_num = max(0, min(frame_num, self.video_manager.total_frames - 1))
+        if self.frame_var is not None:
+            self.frame_var.set(frame_num)
+        
+        # Update frame label
+        if self.frame_label is not None:
+            total_frames = self.video_manager.total_frames - 1 if self.video_manager.total_frames > 0 else 0
+            self.frame_label.config(text=f"Frame: {frame_num} / {total_frames}")
+        
         self.viewer.load_frame(frame_num)
     
+    def on_slider_change(self, value):
+        """Handle frame slider change"""
+        try:
+            frame_num = int(float(value))
+            total_frames = self.video_manager.total_frames - 1 if self.video_manager.total_frames > 0 else 0
+            if self.frame_var.get() != frame_num:
+                self.frame_var.set(frame_num)
+                self.frame_label.config(text=f"Frame: {frame_num} / {total_frames}")
+                self.goto_frame(frame_num)
+        except Exception:
+            pass
+    
+    def toggle_play(self):
+        """Toggle play/pause"""
+        if not self.video_manager.cap:
+            return
+        
+        self.is_playing = not self.is_playing
+        
+        if self.is_playing:
+            self.play_button.config(text="⏸ Pause")
+            self.play()
+        else:
+            self.play_button.config(text="▶ Play")
+            if self.play_after_id:
+                self.viewer.root.after_cancel(self.play_after_id)
+                self.play_after_id = None
+    
+    def play(self):
+        """Play video"""
+        if not self.is_playing:
+            return
+        
+        if self.viewer.current_frame_num >= self.video_manager.total_frames - 1:
+            self.is_playing = False
+            self.play_button.config(text="▶ Play")
+            return
+        
+        self.next_frame()
+        
+        # Schedule next frame
+        delay = int(1000 / (self.video_manager.fps * self.playback_speed))
+        self.play_after_id = self.viewer.root.after(delay, self.play)
+    
+    def update_speed(self):
+        """Update playback speed"""
+        try:
+            self.playback_speed = self.speed_var.get()
+        except:
+            self.playback_speed = 1.0
+    
     def on_video_loaded(self):
+        """Called when video is loaded - preserve current frame position"""
         if self.video_manager.total_frames > 0:
-            self.goto_frame(0)
+            # Update frame slider range
+            if self.frame_slider is not None:
+                self.frame_slider.config(to=max(100, self.video_manager.total_frames - 1))
+            
+            # Preserve current frame position (don't reset to 0 if video was already loaded)
+            current_frame = self.viewer.current_frame_num
+            if current_frame >= self.video_manager.total_frames:
+                current_frame = 0
+            
+            if self.frame_var is not None:
+                self.frame_var.set(current_frame)
+            
+            if self.frame_label is not None:
+                total_frames = self.video_manager.total_frames - 1
+                self.frame_label.config(text=f"Frame: {current_frame} / {total_frames}")
+            
+            # Load current frame (preserves position)
+            self.goto_frame(current_frame)
             self.status_label.config(text=f"Video loaded: {self.video_manager.total_frames} frames")
     
     def on_csv_loaded(self):
         pass
     
     def cleanup(self):
+        # Stop playback if running
+        if self.is_playing:
+            self.is_playing = False
+            if self.play_after_id:
+                self.viewer.root.after_cancel(self.play_after_id)
+                self.play_after_id = None
+        
         # Save gallery
         if self.gallery_manager.is_initialized():
             self.gallery_manager.save_gallery()
