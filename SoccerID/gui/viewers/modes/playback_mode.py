@@ -914,9 +914,31 @@ class PlaybackMode(BaseMode):
                                    analytics_color, thickness)
         
         elif position == "top_banner":
-            # Vertical layout for top banner with proper spacing
+            # Horizontal layout for top banner (same as bottom banner)
+            num_players = len(players_to_draw)
+            if num_players > 0:
+                column_width = panel_size[0] // num_players
+                for i, (player_name, analytics_lines, player_color, player_id) in enumerate(players_to_draw):
+                    column_x = pos[0] + i * column_width + 10
+                    column_y = pos[1] + 10
+                    
+                    # Draw player name with color
+                    name_text = f"{player_name}:"
+                    cv2.putText(display_frame, name_text, (column_x, column_y), font_face, font_scale,
+                               player_color, thickness)
+                    
+                    # Draw analytics lines
+                    for j, line in enumerate(analytics_lines[:3]):  # Limit to 3 lines per player
+                        line_y = column_y + (j + 1) * line_height
+                        if line_y > pos[1] + panel_size[1] - 10:
+                            break
+                        cv2.putText(display_frame, line, (column_x, line_y), font_face, font_scale * 0.9,
+                                   analytics_color, thickness)
+        
+        else:
+            # Vertical layout for panels/bars (left_bar, right_bar, corner panels)
             for i, (player_name, analytics_lines, player_color, player_id) in enumerate(players_to_draw):
-                # Calculate spacing - ensure enough room for analytics
+                # Calculate spacing - ensure enough room for analytics to not overlap
                 lines_per_player = min(len(analytics_lines), 3)
                 player_height = (lines_per_player + 1) * line_height + 20  # Name + lines + spacing
                 
@@ -939,26 +961,6 @@ class PlaybackMode(BaseMode):
                 
                 # Move to next player with proper spacing
                 text_y += player_height
-        
-        else:
-            # Vertical layout for panels/bars
-            for i, (player_name, analytics_lines, player_color, player_id) in enumerate(players_to_draw):
-                # Draw player name with color
-                name_text = f"{player_name}:"
-                cv2.putText(display_frame, name_text, (text_x, text_y), font_face, font_scale,
-                           player_color, thickness)
-                
-                # Draw analytics lines
-                for j, line in enumerate(analytics_lines[:3]):  # Limit to 3 lines per player
-                    line_y = text_y + (j + 1) * line_height
-                    if line_y > pos[1] + panel_size[1] - 10:
-                        break
-                    cv2.putText(display_frame, line, (text_x + 10, line_y), font_face, font_scale * 0.9,
-                               analytics_color, thickness)
-                
-                text_y += len(analytics_lines[:3]) * line_height + 15
-                if text_y > pos[1] + panel_size[1] - 10:
-                    break
         
         return display_frame
     
@@ -1262,15 +1264,27 @@ class PlaybackMode(BaseMode):
                         continue
                     
                     current_frame = self.viewer.current_frame_num
-                    target_frame = current_frame + self.buffer_read_ahead
                     
-                    with self.buffer_lock:
-                        buffer_size = len(self.frame_buffer)
-                        if target_frame in self.frame_buffer or buffer_size >= self.buffer_max_size:
-                            time.sleep(0.05)
-                            continue
+                    # Buffer multiple frames ahead for smooth playback
+                    frames_to_buffer = []
+                    for offset in range(1, self.buffer_read_ahead + 1):
+                        target_frame = current_frame + offset
+                        if target_frame < self.video_manager.total_frames:
+                            frames_to_buffer.append(target_frame)
                     
-                    if target_frame < self.video_manager.total_frames:
+                    # Also buffer some frames behind for rewind
+                    for offset in range(1, min(30, current_frame) + 1):
+                        target_frame = current_frame - offset
+                        if target_frame >= 0:
+                            frames_to_buffer.append(target_frame)
+                    
+                    # Buffer frames
+                    for target_frame in frames_to_buffer:
+                        with self.buffer_lock:
+                            buffer_size = len(self.frame_buffer)
+                            if target_frame in self.frame_buffer or buffer_size >= self.buffer_max_size:
+                                continue
+                        
                         # Use separate VideoCapture for buffering
                         buffer_cap.set(cv2.CAP_PROP_POS_FRAMES, target_frame)
                         ret, frame = buffer_cap.read()
@@ -1294,7 +1308,23 @@ class PlaybackMode(BaseMode):
     
     def update_display(self):
         """Update display with current frame"""
-        self.viewer.load_frame(self.viewer.current_frame_num)
+        # Check buffer first for smooth playback
+        frame_num = self.viewer.current_frame_num
+        frame = None
+        
+        # Try to get from PlaybackMode buffer first
+        with self.buffer_lock:
+            if frame_num in self.frame_buffer:
+                frame = self.frame_buffer[frame_num].copy()
+                # Move to end (most recently used)
+                self.frame_buffer.move_to_end(frame_num)
+        
+        # Fallback to video_manager
+        if frame is None:
+            frame = self.video_manager.get_frame(frame_num)
+        
+        if frame is not None:
+            self.display_frame(frame, frame_num)
     
     def first_frame(self):
         self.goto_frame(0)
