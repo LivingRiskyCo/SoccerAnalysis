@@ -1165,11 +1165,43 @@ class PlaybackMode(BaseMode):
         return display_frame
     
     def get_player_color(self, player_id: int, team: str, name: str) -> tuple:
-        """Get color for a player based on viz_color_mode setting"""
+        """Get color for a player based on viz_color_mode setting and per-player settings"""
+        # Check for per-player custom color from roster first
+        if name:
+            try:
+                from team_roster_manager import TeamRosterManager
+                roster_manager = TeamRosterManager()
+                player_data = roster_manager.roster.get(name, {})
+                viz_settings = player_data.get("visualization_settings", {})
+                
+                # Check for per-player custom color
+                if viz_settings.get("use_custom_color") and viz_settings.get("custom_color_rgb"):
+                    rgb = viz_settings["custom_color_rgb"]
+                    if isinstance(rgb, list) and len(rgb) == 3:
+                        # Convert RGB to BGR for OpenCV
+                        return (rgb[2], rgb[1], rgb[0])
+            except Exception:
+                pass  # Fall through to default logic
+        
         color_mode = self.viz_color_mode.get()
         
-        # Track mode: Use track ID based colors
+        # Track mode: Use track ID based colors (or per-player tracker color)
         if color_mode == "track":
+            # Check for per-player tracker color
+            if name:
+                try:
+                    from team_roster_manager import TeamRosterManager
+                    roster_manager = TeamRosterManager()
+                    player_data = roster_manager.roster.get(name, {})
+                    viz_settings = player_data.get("visualization_settings", {})
+                    if viz_settings.get("tracker_color_rgb"):
+                        rgb = viz_settings["tracker_color_rgb"]
+                        if isinstance(rgb, list) and len(rgb) == 3:
+                            return (rgb[2], rgb[1], rgb[0])  # RGB to BGR
+                except Exception:
+                    pass
+            
+            # Default track colors
             colors = [
                 (0, 255, 0), (255, 0, 0), (0, 0, 255), (255, 255, 0),
                 (255, 0, 255), (0, 255, 255), (128, 0, 128), (255, 165, 0),

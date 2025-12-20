@@ -2795,4 +2795,447 @@ Playback Viewer:
         """Update focus players UI"""
         # TODO: Implement
         pass
+    
+    # ==================== ROSTER MANAGEMENT METHODS ====================
+    
+    def _import_roster_csv(self, roster_manager, parent_frame):
+        """Import roster from CSV file"""
+        filename = filedialog.askopenfilename(
+            title="Import Roster from CSV",
+            filetypes=[("CSV files", "*.csv"), ("All files", "*.*")]
+        )
+        if filename:
+            try:
+                count = roster_manager.import_from_csv(filename)
+                messagebox.showinfo("Import Complete", f"Imported {count} players from CSV")
+                self._refresh_roster_tab(parent_frame)
+            except Exception as e:
+                messagebox.showerror("Import Error", f"Failed to import roster: {e}")
+                import traceback
+                traceback.print_exc()
+    
+    def _export_roster_csv(self, roster_manager):
+        """Export roster to CSV file"""
+        filename = filedialog.asksaveasfilename(
+            title="Export Roster to CSV",
+            defaultextension=".csv",
+            filetypes=[("CSV files", "*.csv"), ("All files", "*.*")]
+        )
+        if filename:
+            try:
+                roster_manager.export_to_csv(filename)
+                messagebox.showinfo("Export Complete", f"Roster exported to {os.path.basename(filename)}")
+            except Exception as e:
+                messagebox.showerror("Export Error", f"Failed to export roster: {e}")
+                import traceback
+                traceback.print_exc()
+    
+    def _add_roster_player(self, roster_manager, parent_frame):
+        """Add a new player to the roster with visualization settings"""
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Add Player to Roster")
+        dialog.geometry("500x600")
+        dialog.transient(self.root)
+        dialog.grab_set()
+        
+        # Center dialog
+        dialog.update_idletasks()
+        x = (dialog.winfo_screenwidth() // 2) - (dialog.winfo_width() // 2)
+        y = (dialog.winfo_screenheight() // 2) - (dialog.winfo_height() // 2)
+        dialog.geometry(f"+{x}+{y}")
+        
+        main_frame = ttk.Frame(dialog, padding="20")
+        main_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Create scrollable frame
+        canvas = tk.Canvas(main_frame)
+        scrollbar = ttk.Scrollbar(main_frame, orient="vertical", command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
+        
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        ttk.Label(scrollable_frame, text="Add Player", font=("Arial", 14, "bold")).pack(pady=(0, 20))
+        
+        form_frame = ttk.Frame(scrollable_frame)
+        form_frame.pack(fill=tk.X, pady=10)
+        
+        # Name
+        ttk.Label(form_frame, text="Name *:").grid(row=0, column=0, sticky=tk.W, padx=5, pady=5)
+        name_var = tk.StringVar()
+        ttk.Entry(form_frame, textvariable=name_var, width=30).grid(row=0, column=1, padx=5, pady=5)
+        
+        # Jersey
+        ttk.Label(form_frame, text="Jersey:").grid(row=1, column=0, sticky=tk.W, padx=5, pady=5)
+        jersey_var = tk.StringVar()
+        ttk.Entry(form_frame, textvariable=jersey_var, width=30).grid(row=1, column=1, padx=5, pady=5)
+        
+        # Team
+        ttk.Label(form_frame, text="Team:").grid(row=2, column=0, sticky=tk.W, padx=5, pady=5)
+        team_var = tk.StringVar()
+        ttk.Entry(form_frame, textvariable=team_var, width=30).grid(row=2, column=1, padx=5, pady=5)
+        
+        # Position
+        ttk.Label(form_frame, text="Position:").grid(row=3, column=0, sticky=tk.W, padx=5, pady=5)
+        position_var = tk.StringVar()
+        ttk.Entry(form_frame, textvariable=position_var, width=30).grid(row=3, column=1, padx=5, pady=5)
+        
+        # Active
+        active_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(form_frame, text="Active", variable=active_var).grid(row=4, column=1, sticky=tk.W, padx=5, pady=5)
+        
+        # Visualization settings section
+        viz_frame = ttk.LabelFrame(form_frame, text="Visualization Settings (Optional)", padding="10")
+        viz_frame.grid(row=5, column=0, columnspan=2, sticky=tk.EW, pady=10, padx=5)
+        
+        # Custom color - Simple RGB entry
+        ttk.Label(viz_frame, text="Custom Color (R,G,B):").grid(row=0, column=0, sticky=tk.W, padx=5, pady=5)
+        custom_color_var = tk.StringVar()
+        ttk.Entry(viz_frame, textvariable=custom_color_var, width=20, 
+                 placeholder_text="e.g., 255,0,0").grid(row=0, column=1, padx=5, pady=5)
+        ttk.Label(viz_frame, text="(0-255 for each)", font=("Arial", 8), 
+                 foreground="gray").grid(row=0, column=2, sticky=tk.W, padx=5)
+        
+        # Box thickness
+        ttk.Label(viz_frame, text="Box Thickness:").grid(row=1, column=0, sticky=tk.W, padx=5, pady=5)
+        box_thickness_var = tk.IntVar(value=2)
+        ttk.Spinbox(viz_frame, from_=1, to=10, textvariable=box_thickness_var, width=10).grid(row=1, column=1, padx=5, sticky=tk.W)
+        
+        # Show glow
+        show_glow_var = tk.BooleanVar(value=False)
+        ttk.Checkbutton(viz_frame, text="Show Glow Effect", variable=show_glow_var).grid(row=2, column=0, columnspan=2, sticky=tk.W, padx=5, pady=5)
+        
+        # Glow intensity
+        ttk.Label(viz_frame, text="Glow Intensity:").grid(row=3, column=0, sticky=tk.W, padx=5, pady=5)
+        glow_intensity_var = tk.IntVar(value=50)
+        ttk.Spinbox(viz_frame, from_=0, to=100, textvariable=glow_intensity_var, width=10).grid(row=3, column=1, padx=5, sticky=tk.W)
+        
+        # Show trail
+        show_trail_var = tk.BooleanVar(value=False)
+        ttk.Checkbutton(viz_frame, text="Show Movement Trail", variable=show_trail_var).grid(row=4, column=0, columnspan=2, sticky=tk.W, padx=5, pady=5)
+        
+        # Label style
+        ttk.Label(viz_frame, text="Label Style:").grid(row=5, column=0, sticky=tk.W, padx=5, pady=5)
+        label_style_var = tk.StringVar(value="full_name")
+        ttk.Combobox(viz_frame, textvariable=label_style_var, 
+                    values=["full_name", "jersey", "initials", "number"], 
+                    width=12, state="readonly").grid(row=5, column=1, padx=5, sticky=tk.W)
+        
+        # Tracker color (for track ID mode)
+        ttk.Label(viz_frame, text="Tracker Color (R,G,B):").grid(row=6, column=0, sticky=tk.W, padx=5, pady=5)
+        tracker_color_var = tk.StringVar()
+        ttk.Entry(viz_frame, textvariable=tracker_color_var, width=20,
+                 placeholder_text="e.g., 0,255,0").grid(row=6, column=1, padx=5, pady=5)
+        ttk.Label(viz_frame, text="(For track ID visualization)", font=("Arial", 8),
+                 foreground="gray").grid(row=6, column=2, sticky=tk.W, padx=5)
+        
+        def add():
+            name = name_var.get().strip()
+            if not name:
+                messagebox.showwarning("Missing Name", "Player name is required")
+                return
+            
+            # Parse visualization settings
+            viz_settings = {}
+            custom_color_str = custom_color_var.get().strip()
+            if custom_color_str:
+                try:
+                    rgb = self._parse_color_string(custom_color_str)
+                    if rgb:
+                        viz_settings["use_custom_color"] = True
+                        viz_settings["custom_color_rgb"] = rgb
+                except Exception:
+                    pass
+            
+            tracker_color_str = tracker_color_var.get().strip()
+            if tracker_color_str:
+                try:
+                    rgb = self._parse_color_string(tracker_color_str)
+                    if rgb:
+                        viz_settings["tracker_color_rgb"] = rgb
+                except Exception:
+                    pass
+            
+            if box_thickness_var.get() != 2:
+                viz_settings["box_thickness"] = box_thickness_var.get()
+            
+            if show_glow_var.get():
+                viz_settings["show_glow"] = True
+                viz_settings["glow_intensity"] = glow_intensity_var.get()
+            
+            if show_trail_var.get():
+                viz_settings["show_trail"] = True
+            
+            if label_style_var.get() != "full_name":
+                viz_settings["label_style"] = label_style_var.get()
+            
+            roster_manager.add_player(
+                name=name,
+                jersey_number=jersey_var.get().strip() or None,
+                team=team_var.get().strip() or None,
+                position=position_var.get().strip() or None,
+                active=active_var.get(),
+                visualization_settings=viz_settings if viz_settings else None
+            )
+            messagebox.showinfo("Success", f"Added player: {name}")
+            dialog.destroy()
+            self._refresh_roster_tab(parent_frame)
+        
+        button_frame = ttk.Frame(scrollable_frame)
+        button_frame.pack(fill=tk.X, pady=(20, 0))
+        
+        ttk.Button(button_frame, text="Add", command=add).pack(side=tk.RIGHT, padx=5)
+        ttk.Button(button_frame, text="Cancel", command=dialog.destroy).pack(side=tk.RIGHT, padx=5)
+    
+    def _edit_roster_player(self, roster_manager, player_name, parent_frame):
+        """Edit a player in the roster with visualization settings"""
+        player_data = roster_manager.roster.get(player_name, {})
+        
+        dialog = tk.Toplevel(self.root)
+        dialog.title(f"Edit Player: {player_name}")
+        dialog.geometry("500x600")
+        dialog.transient(self.root)
+        dialog.grab_set()
+        
+        # Center dialog
+        dialog.update_idletasks()
+        x = (dialog.winfo_screenwidth() // 2) - (dialog.winfo_width() // 2)
+        y = (dialog.winfo_screenheight() // 2) - (dialog.winfo_height() // 2)
+        dialog.geometry(f"+{x}+{y}")
+        
+        main_frame = ttk.Frame(dialog, padding="20")
+        main_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Create scrollable frame
+        canvas = tk.Canvas(main_frame)
+        scrollbar = ttk.Scrollbar(main_frame, orient="vertical", command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
+        
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        ttk.Label(scrollable_frame, text=f"Edit: {player_name}", font=("Arial", 14, "bold")).pack(pady=(0, 20))
+        
+        form_frame = ttk.Frame(scrollable_frame)
+        form_frame.pack(fill=tk.X, pady=10)
+        
+        # Jersey
+        ttk.Label(form_frame, text="Jersey:").grid(row=0, column=0, sticky=tk.W, padx=5, pady=5)
+        jersey_var = tk.StringVar(value=player_data.get('jersey_number', '') or '')
+        ttk.Entry(form_frame, textvariable=jersey_var, width=30).grid(row=0, column=1, padx=5, pady=5)
+        
+        # Team
+        ttk.Label(form_frame, text="Team:").grid(row=1, column=0, sticky=tk.W, padx=5, pady=5)
+        team_var = tk.StringVar(value=player_data.get('team', '') or '')
+        ttk.Entry(form_frame, textvariable=team_var, width=30).grid(row=1, column=1, padx=5, pady=5)
+        
+        # Position
+        ttk.Label(form_frame, text="Position:").grid(row=2, column=0, sticky=tk.W, padx=5, pady=5)
+        position_var = tk.StringVar(value=player_data.get('position', '') or '')
+        ttk.Entry(form_frame, textvariable=position_var, width=30).grid(row=2, column=1, padx=5, pady=5)
+        
+        # Active
+        active_var = tk.BooleanVar(value=player_data.get('active', True))
+        ttk.Checkbutton(form_frame, text="Active", variable=active_var).grid(row=3, column=1, sticky=tk.W, padx=5, pady=5)
+        
+        # Visualization settings section
+        viz_frame = ttk.LabelFrame(form_frame, text="Visualization Settings (Optional)", padding="10")
+        viz_frame.grid(row=4, column=0, columnspan=2, sticky=tk.EW, pady=10, padx=5)
+        
+        # Load existing visualization settings
+        viz = player_data.get("visualization_settings", {})
+        
+        # Custom color
+        ttk.Label(viz_frame, text="Custom Color (R,G,B):").grid(row=0, column=0, sticky=tk.W, padx=5, pady=5)
+        custom_color_var = tk.StringVar()
+        initial_color = None
+        if viz.get("custom_color_rgb"):
+            rgb = viz["custom_color_rgb"]
+            if isinstance(rgb, list) and len(rgb) == 3:
+                initial_color = tuple(rgb)
+                custom_color_var.set(f"{rgb[0]},{rgb[1]},{rgb[2]}")
+            elif isinstance(rgb, str):
+                custom_color_var.set(rgb)
+        ttk.Entry(viz_frame, textvariable=custom_color_var, width=20).grid(row=0, column=1, padx=5, pady=5)
+        ttk.Label(viz_frame, text="(0-255 for each)", font=("Arial", 8),
+                 foreground="gray").grid(row=0, column=2, sticky=tk.W, padx=5)
+        
+        # Box thickness
+        ttk.Label(viz_frame, text="Box Thickness:").grid(row=1, column=0, sticky=tk.W, padx=5, pady=5)
+        box_thickness_var = tk.IntVar(value=viz.get("box_thickness", 2))
+        ttk.Spinbox(viz_frame, from_=1, to=10, textvariable=box_thickness_var, width=10).grid(row=1, column=1, padx=5, sticky=tk.W)
+        
+        # Show glow
+        show_glow_var = tk.BooleanVar(value=viz.get("show_glow", False))
+        ttk.Checkbutton(viz_frame, text="Show Glow Effect", variable=show_glow_var).grid(row=2, column=0, columnspan=2, sticky=tk.W, padx=5, pady=5)
+        
+        # Glow intensity
+        ttk.Label(viz_frame, text="Glow Intensity:").grid(row=3, column=0, sticky=tk.W, padx=5, pady=5)
+        glow_intensity_var = tk.IntVar(value=viz.get("glow_intensity", 50))
+        ttk.Spinbox(viz_frame, from_=0, to=100, textvariable=glow_intensity_var, width=10).grid(row=3, column=1, padx=5, sticky=tk.W)
+        
+        # Show trail
+        show_trail_var = tk.BooleanVar(value=viz.get("show_trail", False))
+        ttk.Checkbutton(viz_frame, text="Show Movement Trail", variable=show_trail_var).grid(row=4, column=0, columnspan=2, sticky=tk.W, padx=5, pady=5)
+        
+        # Label style
+        ttk.Label(viz_frame, text="Label Style:").grid(row=5, column=0, sticky=tk.W, padx=5, pady=5)
+        label_style_var = tk.StringVar(value=viz.get("label_style", "full_name"))
+        ttk.Combobox(viz_frame, textvariable=label_style_var, 
+                    values=["full_name", "jersey", "initials", "number"], 
+                    width=12, state="readonly").grid(row=5, column=1, padx=5, sticky=tk.W)
+        
+        # Tracker color
+        ttk.Label(viz_frame, text="Tracker Color (R,G,B):").grid(row=6, column=0, sticky=tk.W, padx=5, pady=5)
+        tracker_color_var = tk.StringVar()
+        if viz.get("tracker_color_rgb"):
+            rgb = viz["tracker_color_rgb"]
+            if isinstance(rgb, list) and len(rgb) == 3:
+                tracker_color_var.set(f"{rgb[0]},{rgb[1]},{rgb[2]}")
+            elif isinstance(rgb, str):
+                tracker_color_var.set(rgb)
+        ttk.Entry(viz_frame, textvariable=tracker_color_var, width=20).grid(row=6, column=1, padx=5, pady=5)
+        ttk.Label(viz_frame, text="(For track ID visualization)", font=("Arial", 8),
+                 foreground="gray").grid(row=6, column=2, sticky=tk.W, padx=5)
+        
+        def save():
+            # Parse visualization settings
+            viz_settings = {}
+            custom_color_str = custom_color_var.get().strip()
+            if custom_color_str:
+                try:
+                    rgb = self._parse_color_string(custom_color_str)
+                    if rgb:
+                        viz_settings["use_custom_color"] = True
+                        viz_settings["custom_color_rgb"] = rgb
+                except Exception:
+                    pass
+            
+            tracker_color_str = tracker_color_var.get().strip()
+            if tracker_color_str:
+                try:
+                    rgb = self._parse_color_string(tracker_color_str)
+                    if rgb:
+                        viz_settings["tracker_color_rgb"] = rgb
+                except Exception:
+                    pass
+            
+            if box_thickness_var.get() != 2:
+                viz_settings["box_thickness"] = box_thickness_var.get()
+            
+            if show_glow_var.get():
+                viz_settings["show_glow"] = True
+                viz_settings["glow_intensity"] = glow_intensity_var.get()
+            
+            if show_trail_var.get():
+                viz_settings["show_trail"] = True
+            
+            if label_style_var.get() != "full_name":
+                viz_settings["label_style"] = label_style_var.get()
+            
+            update_data = {
+                "jersey_number": jersey_var.get().strip() or None,
+                "team": team_var.get().strip() or None,
+                "position": position_var.get().strip() or None,
+                "active": active_var.get()
+            }
+            if viz_settings:
+                update_data["visualization_settings"] = viz_settings
+            
+            roster_manager.update_player(player_name, **update_data)
+            messagebox.showinfo("Success", f"Updated player: {player_name}")
+            dialog.destroy()
+            self._refresh_roster_tab(parent_frame)
+        
+        button_frame = ttk.Frame(scrollable_frame)
+        button_frame.pack(fill=tk.X, pady=(20, 0))
+        
+        ttk.Button(button_frame, text="Save", command=save).pack(side=tk.RIGHT, padx=5)
+        ttk.Button(button_frame, text="Cancel", command=dialog.destroy).pack(side=tk.RIGHT, padx=5)
+    
+    def _delete_roster_player(self, roster_manager, player_name, parent_frame):
+        """Delete a player from the roster"""
+        if messagebox.askyesno("Delete Player", f"Delete player '{player_name}' from roster?"):
+            if roster_manager.delete_player(player_name):
+                messagebox.showinfo("Success", f"Deleted player: {player_name}")
+                self._refresh_roster_tab(parent_frame)
+            else:
+                messagebox.showerror("Error", f"Player '{player_name}' not found")
+    
+    def _link_video_to_roster(self, roster_manager):
+        """Link a video to roster players"""
+        video_path = filedialog.askopenfilename(
+            title="Select Video to Link",
+            filetypes=[("Video files", "*.mp4 *.avi *.mov *.mkv"), ("All files", "*.*")]
+        )
+        if video_path:
+            try:
+                # Get list of active players
+                active_players = [name for name, data in roster_manager.roster.items() 
+                                if name != 'videos' and data.get('active', True)]
+                
+                if not active_players:
+                    messagebox.showwarning("No Active Players", "No active players in roster to link")
+                    return
+                
+                # Simple linking - just store video path
+                roster_manager.link_video(video_path, active_players)
+                messagebox.showinfo("Success", f"Linked video to {len(active_players)} players")
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to link video: {e}")
+                import traceback
+                traceback.print_exc()
+    
+    def _refresh_roster_tab(self, parent_frame):
+        """Refresh the roster tab"""
+        if hasattr(parent_frame, '_roster_manager') and hasattr(parent_frame, '_roster_listbox'):
+            # Re-import RosterTab to get _populate_roster_list method
+            try:
+                from .tabs.roster_tab import RosterTab
+                roster_tab = RosterTab(self, parent_frame)
+                roster_tab._populate_roster_list(
+                    parent_frame._roster_listbox,
+                    parent_frame._roster_manager,
+                    parent_frame._roster_list_data
+                )
+            except Exception as e:
+                # Fallback: just reload the tab
+                for widget in parent_frame.winfo_children():
+                    widget.destroy()
+                try:
+                    from .tabs.roster_tab import RosterTab
+                    RosterTab(self, parent_frame)
+                except Exception as e2:
+                    messagebox.showerror("Error", f"Could not refresh roster tab: {e2}")
+    
+    def _parse_color_string(self, color_str):
+        """Parse color string (R,G,B) to RGB tuple"""
+        try:
+            parts = color_str.split(',')
+            if len(parts) == 3:
+                r = int(parts[0].strip())
+                g = int(parts[1].strip())
+                b = int(parts[2].strip())
+                # Validate range
+                if 0 <= r <= 255 and 0 <= g <= 255 and 0 <= b <= 255:
+                    return [r, g, b]
+        except (ValueError, AttributeError):
+            pass
+        return None
 
