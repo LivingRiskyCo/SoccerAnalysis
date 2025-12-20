@@ -2465,14 +2465,13 @@ class PlaybackMode(BaseMode):
             # Get player color
             color = self.get_player_color(int(player_id), team, name)
             
-            # Draw based on visualization style
-            viz_style = self.player_viz_style.get()
-            
-            if viz_style == "box" and bbox:
-                # Draw box with shrink factor
+            # Draw bounding boxes if enabled (separate from circles, like legacy viewer)
+            if self.show_bounding_boxes.get() and bbox:
                 display_frame = self.draw_player_box(display_frame, bbox, color, int(player_id), team, name)
-            elif viz_style == "circle":
-                # Draw circle at player position
+            
+            # Draw circles at feet if enabled (separate from boxes, like legacy viewer)
+            if self.show_circles_at_feet.get():
+                # Draw circle at player position (feet)
                 display_frame = self.draw_player_circle(display_frame, (x, y), color, int(player_id), team, name)
             
             # Draw ellipse if enabled
