@@ -1185,36 +1185,59 @@ class PlaybackMode(BaseMode):
         """Stop frame buffering thread"""
         self.buffer_thread_running = False
         if self.buffer_thread:
-            self.buffer_thread.join(timeout=1.0)
+            self.buffer_thread.join(timeout=2.0)  # Increased timeout for cleanup
+        # Clear buffer after thread stops
+        with self.buffer_lock:
+            self.frame_buffer.clear()
     
     def _buffer_worker(self):
         """Background frame buffering"""
-        while self.buffer_thread_running and self.video_manager.cap:
-            try:
-                if not self.is_playing:
-                    time.sleep(0.1)
-                    continue
-                
-                current_frame = self.viewer.current_frame_num
-                target_frame = current_frame + self.buffer_read_ahead
-                
-                with self.buffer_lock:
-                    buffer_size = len(self.frame_buffer)
-                    if target_frame in self.frame_buffer or buffer_size >= self.buffer_max_size:
-                        time.sleep(0.05)
+        # Use a separate VideoCapture instance for this thread to avoid conflicts
+        buffer_cap = None
+        try:
+            if not self.video_manager.video_path:
+                return
+            
+            buffer_cap = cv2.VideoCapture(self.video_manager.video_path)
+            if not buffer_cap.isOpened():
+                return
+            
+            while self.buffer_thread_running and self.video_manager.cap:
+                try:
+                    if not self.is_playing:
+                        time.sleep(0.1)
                         continue
-                
-                if target_frame < self.video_manager.total_frames:
-                    frame = self.video_manager.get_frame(target_frame)
-                    if frame is not None:
-                        with self.buffer_lock:
-                            self.frame_buffer[target_frame] = frame
-                            while len(self.frame_buffer) > self.buffer_max_size:
-                                self.frame_buffer.popitem(last=False)
-                
-                time.sleep(0.01)
-            except:
-                time.sleep(0.1)
+                    
+                    current_frame = self.viewer.current_frame_num
+                    target_frame = current_frame + self.buffer_read_ahead
+                    
+                    with self.buffer_lock:
+                        buffer_size = len(self.frame_buffer)
+                        if target_frame in self.frame_buffer or buffer_size >= self.buffer_max_size:
+                            time.sleep(0.05)
+                            continue
+                    
+                    if target_frame < self.video_manager.total_frames:
+                        # Use separate VideoCapture for buffering
+                        buffer_cap.set(cv2.CAP_PROP_POS_FRAMES, target_frame)
+                        ret, frame = buffer_cap.read()
+                        if ret and frame is not None:
+                            with self.buffer_lock:
+                                self.frame_buffer[target_frame] = frame
+                                while len(self.frame_buffer) > self.buffer_max_size:
+                                    self.frame_buffer.popitem(last=False)
+                    
+                    time.sleep(0.01)
+                except Exception as e:
+                    # Log error but continue
+                    time.sleep(0.1)
+        finally:
+            # Always release the buffer VideoCapture
+            if buffer_cap is not None:
+                try:
+                    buffer_cap.release()
+                except:
+                    pass
     
     def update_display(self):
         """Update display with current frame"""
