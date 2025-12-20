@@ -255,8 +255,8 @@ class PlaybackMode(BaseMode):
         file_buttons_frame = ttk.Frame(file_frame)
         file_buttons_frame.pack(side=tk.LEFT, padx=5)
         
-        ttk.Button(file_buttons_frame, text="Load Video", command=self.load_video, width=12).pack(side=tk.LEFT, padx=2)
-        ttk.Button(file_buttons_frame, text="Load CSV", command=self.load_csv, width=12).pack(side=tk.LEFT, padx=2)
+        ttk.Button(file_buttons_frame, text="Load Video", command=self.load_video, width=18).pack(side=tk.LEFT, padx=2)
+        ttk.Button(file_buttons_frame, text="Load CSV", command=self.load_csv, width=18).pack(side=tk.LEFT, padx=2)
         ttk.Button(file_buttons_frame, text="Load Metadata", command=self.load_metadata_manual, width=12).pack(side=tk.LEFT, padx=2)
         ttk.Button(file_buttons_frame, text="Reload CSV", command=self.reload_csv, width=12).pack(side=tk.LEFT, padx=2)
         ttk.Button(file_buttons_frame, text="Export Video", command=self.export_video, width=12).pack(side=tk.LEFT, padx=2)
@@ -1081,16 +1081,33 @@ class PlaybackMode(BaseMode):
         if not self.event_marker_system:
             return display_frame
         
-        # Get events for this frame (within ±2 frames)
-        events = self.event_marker_system.get_events_near_frame(frame_num, tolerance=2)
+        # Get events for this frame (within ±2 frames tolerance)
+        tolerance = 2
+        events = self.event_marker_system.get_markers_in_range(
+            max(0, frame_num - tolerance), 
+            frame_num + tolerance
+        )
         
-        for event in events:
-            # Draw marker at event position (if available)
-            if hasattr(event, 'x') and hasattr(event, 'y'):
-                x, y = int(event.x), int(event.y)
-                cv2.circle(display_frame, (x, y), 15, (0, 255, 255), 3)
-                cv2.putText(display_frame, event.event_type.upper(), (x + 20, y),
-                           cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
+        h, w = display_frame.shape[:2]
+        
+        for marker in events:
+            # Get position from marker (if available)
+            if marker.position:
+                # Position is in normalized coordinates (0-1)
+                x = int(marker.position[0] * w)
+                y = int(marker.position[1] * h)
+            else:
+                # Default to center if no position
+                x, y = w // 2, h // 2
+            
+            # Draw marker circle
+            color = (0, 255, 255)  # Cyan
+            cv2.circle(display_frame, (x, y), 15, color, 3)
+            
+            # Draw event type text
+            event_type_str = marker.event_type.value.upper() if hasattr(marker.event_type, 'value') else str(marker.event_type).upper()
+            cv2.putText(display_frame, event_type_str, (x + 20, y),
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
         
         return display_frame
     
