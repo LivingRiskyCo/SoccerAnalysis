@@ -1151,9 +1151,27 @@ class PlaybackMode(BaseMode):
         return display_frame
     
     def get_player_color(self, player_id: int, team: str, name: str) -> tuple:
-        """Get color for a player"""
+        """Get color for a player based on viz_color_mode setting"""
+        color_mode = self.viz_color_mode.get()
+        
+        # Track mode: Use track ID based colors
+        if color_mode == "track":
+            colors = [
+                (0, 255, 0), (255, 0, 0), (0, 0, 255), (255, 255, 0),
+                (255, 0, 255), (0, 255, 255), (128, 0, 128), (255, 165, 0),
+                (255, 192, 203), (0, 255, 127), (255, 140, 0), (138, 43, 226),
+                (255, 20, 147), (0, 191, 255), (255, 215, 0), (50, 205, 50)
+            ]
+            return colors[player_id % len(colors)]
+        
+        # Custom mode: Use custom box color if enabled, otherwise default
+        if color_mode == "custom":
+            if self.use_custom_box_color.get():
+                return (self.box_color_b.get(), self.box_color_g.get(), self.box_color_r.get())
+            # Fall through to default colors
+        
+        # Team mode (default): Use team colors if available
         if self.team_colors:
-            # Try to get team color
             team_name_lower = (team or "").lower()
             for team_key in ["team1", "team2"]:
                 team_data = self.team_colors.get('team_colors', {}).get(team_key, {})
@@ -1162,7 +1180,7 @@ class PlaybackMode(BaseMode):
                     if tracker_color:
                         return tuple(tracker_color[:3])
         
-        # Default colors
+        # Default colors (fallback)
         colors = [
             (0, 255, 0), (255, 0, 0), (0, 0, 255), (255, 255, 0),
             (255, 0, 255), (0, 255, 255), (128, 0, 128), (255, 165, 0)
@@ -2472,7 +2490,7 @@ class PlaybackMode(BaseMode):
         return display_frame
     
     def draw_player_box(self, display_frame: np.ndarray, bbox: tuple, color: tuple, player_id: int, team: str, name: str) -> np.ndarray:
-        """Draw player bounding box with shrink factor and custom colors"""
+        """Draw player bounding box with shrink factor, custom colors, and opacity"""
         x1, y1, x2, y2 = bbox
         
         # Apply shrink factor
@@ -2487,8 +2505,12 @@ class PlaybackMode(BaseMode):
             x2 -= shrink_x
             y2 -= shrink_y
         
-        # Get box color
-        if self.use_custom_box_color.get():
+        # Get box color based on color mode and custom color settings
+        color_mode = self.viz_color_mode.get()
+        if color_mode == "custom" and self.use_custom_box_color.get():
+            box_color = (self.box_color_b.get(), self.box_color_g.get(), self.box_color_r.get())
+        elif color_mode == "team" and self.use_custom_box_color.get():
+            # In team mode, custom box color overrides team color
             box_color = (self.box_color_b.get(), self.box_color_g.get(), self.box_color_r.get())
         else:
             box_color = color
@@ -2496,29 +2518,51 @@ class PlaybackMode(BaseMode):
         # Get thickness
         thickness = self.box_thickness.get()
         
-        # Draw box
-        cv2.rectangle(display_frame, (int(x1), int(y1)), (int(x2), int(y2)), box_color, thickness)
+        # Apply opacity if not fully opaque
+        alpha = self.player_viz_alpha.get() / 255.0
+        if alpha < 1.0:
+            # Draw on overlay and blend
+            overlay = display_frame.copy()
+            cv2.rectangle(overlay, (int(x1), int(y1)), (int(x2), int(y2)), box_color, thickness)
+            cv2.addWeighted(overlay, alpha, display_frame, 1 - alpha, 0, display_frame)
+        else:
+            # Draw directly
+            cv2.rectangle(display_frame, (int(x1), int(y1)), (int(x2), int(y2)), box_color, thickness)
         
         return display_frame
     
     def draw_player_circle(self, display_frame: np.ndarray, center: tuple, color: tuple, player_id: int, team: str, name: str) -> np.ndarray:
-        """Draw player circle"""
+        """Draw player circle with opacity support"""
         x, y = center
         radius = 10
         
-        # Circles always use team colors (not custom box color)
-        cv2.circle(display_frame, (int(x), int(y)), radius, color, 2)
+        # Circles use color from get_player_color (respects viz_color_mode)
+        # Apply opacity if not fully opaque
+        alpha = self.player_viz_alpha.get() / 255.0
+        if alpha < 1.0:
+            overlay = display_frame.copy()
+            cv2.circle(overlay, (int(x), int(y)), radius, color, 2)
+            cv2.addWeighted(overlay, alpha, display_frame, 1 - alpha, 0, display_frame)
+        else:
+            cv2.circle(display_frame, (int(x), int(y)), radius, color, 2)
         
         return display_frame
     
     def draw_player_ellipse(self, display_frame: np.ndarray, center: tuple, color: tuple) -> np.ndarray:
-        """Draw ellipse at player feet"""
+        """Draw ellipse at player feet with opacity support"""
         x, y = center
         axes_w = self.ellipse_width.get()
         axes_h = self.ellipse_height.get()
         outline_thickness = self.ellipse_outline_thickness.get()
         
-        cv2.ellipse(display_frame, (int(x), int(y)), (axes_w, axes_h), 0, 0, 360, color, outline_thickness)
+        # Apply opacity if not fully opaque
+        alpha = self.player_viz_alpha.get() / 255.0
+        if alpha < 1.0:
+            overlay = display_frame.copy()
+            cv2.ellipse(overlay, (int(x), int(y)), (axes_w, axes_h), 0, 0, 360, color, outline_thickness)
+            cv2.addWeighted(overlay, alpha, display_frame, 1 - alpha, 0, display_frame)
+        else:
+            cv2.ellipse(display_frame, (int(x), int(y)), (axes_w, axes_h), 0, 0, 360, color, outline_thickness)
         
         return display_frame
     
