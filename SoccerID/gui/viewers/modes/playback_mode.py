@@ -1219,14 +1219,17 @@ class PlaybackMode(BaseMode):
         
         if self.is_playing:
             self.play_button.config(text="⏸ Pause")
-            self.start_buffer_thread()
+            # Ensure buffer thread is running
+            if not self.buffer_thread_running:
+                self.start_buffer_thread()
             self.play()
         else:
             self.play_button.config(text="▶ Play")
             if self.play_after_id:
                 self.viewer.root.after_cancel(self.play_after_id)
                 self.play_after_id = None
-            self.stop_buffer_thread()
+            # Don't stop buffer thread when paused - keep it running for smooth navigation
+            # Buffer thread will continue buffering nearby frames even when paused
     
     def play(self):
         """Play video"""
@@ -1295,8 +1298,9 @@ class PlaybackMode(BaseMode):
                             if target_frame < self.video_manager.total_frames:
                                 frames_to_buffer.append(target_frame)
                     
-                    # Also buffer some frames behind for rewind
-                    for offset in range(1, min(30, current_frame) + 1):
+                    # Also buffer frames behind for rewind (more when paused)
+                    rewind_range = 50 if not self.is_playing else 30  # Buffer more frames behind when paused
+                    for offset in range(1, min(rewind_range, current_frame) + 1):
                         target_frame = current_frame - offset
                         if target_frame >= 0:
                             frames_to_buffer.append(target_frame)
@@ -1317,8 +1321,8 @@ class PlaybackMode(BaseMode):
                                 while len(self.frame_buffer) > self.buffer_max_size:
                                     self.frame_buffer.popitem(last=False)
                     
-                    # Sleep longer when not playing to reduce CPU usage
-                    sleep_time = 0.01 if self.is_playing else 0.05
+                    # Sleep slightly longer when paused, but still keep buffering active
+                    sleep_time = 0.01 if self.is_playing else 0.02  # Reduced from 0.05 to keep buffer more active
                     time.sleep(sleep_time)
                 except Exception as e:
                     # Log error but continue
