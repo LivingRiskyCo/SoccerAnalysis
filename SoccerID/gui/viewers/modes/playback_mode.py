@@ -180,6 +180,59 @@ class PlaybackMode(BaseMode):
         self.show_labels_var = tk.BooleanVar(value=True)
         self.show_trajectories_var = tk.BooleanVar(value=False)
         
+        # Player visualization style (needed in create_ui)
+        self.player_viz_style = tk.StringVar(value="box")  # "box" or "circle"
+        self.viz_color_mode = tk.StringVar(value="team")  # "team", "track", "custom"
+        self.player_graphics_style = tk.StringVar(value="standard")  # "minimal", "standard", "broadcast"
+        
+        # Enhanced feet marker visualization (needed in create_ui)
+        self.feet_marker_style = tk.StringVar(value="circle")  # "circle", "diamond", "star", "hexagon", "ring", "glow", "pulse"
+        self.feet_marker_opacity = tk.IntVar(value=255)
+        self.feet_marker_enable_glow = tk.BooleanVar(value=False)
+        self.feet_marker_glow_intensity = tk.IntVar(value=70)
+        self.feet_marker_enable_shadow = tk.BooleanVar(value=False)
+        self.feet_marker_shadow_offset = tk.IntVar(value=3)
+        self.feet_marker_shadow_opacity = tk.IntVar(value=128)
+        self.feet_marker_enable_gradient = tk.BooleanVar(value=False)
+        self.feet_marker_enable_pulse = tk.BooleanVar(value=False)
+        self.feet_marker_pulse_speed = tk.DoubleVar(value=2.0)
+        self.feet_marker_enable_particles = tk.BooleanVar(value=False)
+        self.feet_marker_particle_count = tk.IntVar(value=5)
+        self.feet_marker_vertical_offset = tk.IntVar(value=50)
+        self.show_direction_arrow = tk.BooleanVar(value=False)
+        
+        # Ellipse visualization (for foot-based tracking)
+        self.ellipse_width = tk.IntVar(value=20)
+        self.ellipse_height = tk.IntVar(value=12)
+        self.ellipse_outline_thickness = tk.IntVar(value=0)
+        
+        # Box appearance customization (needed in create_ui)
+        self.box_shrink_factor = tk.DoubleVar(value=0.10)
+        self.box_thickness = tk.IntVar(value=2)
+        self.use_custom_box_color = tk.BooleanVar(value=False)
+        self.box_color_rgb = tk.StringVar(value="0,255,0")
+        self.box_color_r = tk.IntVar(value=0)
+        self.box_color_g = tk.IntVar(value=255)
+        self.box_color_b = tk.IntVar(value=0)
+        self.player_viz_alpha = tk.IntVar(value=255)
+        
+        # Label customization (needed in create_ui)
+        self.use_custom_label_color = tk.BooleanVar(value=False)
+        self.label_color_rgb = tk.StringVar(value="255,255,255")
+        self.label_color_r = tk.IntVar(value=255)
+        self.label_color_g = tk.IntVar(value=255)
+        self.label_color_b = tk.IntVar(value=255)
+        self.label_font_scale = tk.DoubleVar(value=0.7)
+        self.label_type = tk.StringVar(value="full_name")  # "full_name", "last_name", "jersey", "team", "custom"
+        self.label_custom_text = tk.StringVar(value="Player")
+        self.label_font_face = tk.StringVar(value="FONT_HERSHEY_SIMPLEX")
+        
+        # Prediction/decay visualization colors
+        self.prediction_color_r = tk.IntVar(value=255)
+        self.prediction_color_g = tk.IntVar(value=255)
+        self.prediction_color_b = tk.IntVar(value=0)
+        self.prediction_color_alpha = tk.IntVar(value=255)
+        
         # Now call super (which will call create_ui)
         super().__init__(parent_frame, viewer, video_manager, detection_manager,
                         reid_manager, gallery_manager, csv_manager, anchor_manager)
@@ -1324,6 +1377,21 @@ class PlaybackMode(BaseMode):
                     # Sleep slightly longer when paused, but still keep buffering active
                     sleep_time = 0.01 if self.is_playing else 0.02  # Reduced from 0.05 to keep buffer more active
                     time.sleep(sleep_time)
+                    
+                    # Update buffer status label periodically (every 10 buffer cycles)
+                    if hasattr(self, '_buffer_update_counter'):
+                        self._buffer_update_counter += 1
+                    else:
+                        self._buffer_update_counter = 0
+                    
+                    if self._buffer_update_counter >= 10:
+                        self._buffer_update_counter = 0
+                        # Schedule UI update on main thread
+                        if hasattr(self, 'viewer') and self.viewer.root:
+                            try:
+                                self.viewer.root.after(0, self._update_buffer_status_label)
+                            except:
+                                pass
                 except Exception as e:
                     # Log error but continue
                     time.sleep(0.1)
@@ -1795,6 +1863,22 @@ class PlaybackMode(BaseMode):
             self.buffer_status_label.config(text=status_text, foreground=color)
         except (tk.TclError, AttributeError):
             pass
+    
+    def _sync_box_color(self):
+        """Sync box_color_rgb string with individual R, G, B components"""
+        r = self.box_color_r.get()
+        g = self.box_color_g.get()
+        b = self.box_color_b.get()
+        self.box_color_rgb.set(f"{r},{g},{b}")
+        self.update_display()
+    
+    def _sync_label_color(self):
+        """Sync label_color_rgb string with individual R, G, B components"""
+        r = self.label_color_r.get()
+        g = self.label_color_g.get()
+        b = self.label_color_b.get()
+        self.label_color_rgb.set(f"{r},{g},{b}")
+        self.update_display()
     
     # ==================== ENHANCED DISPLAY ====================
     
