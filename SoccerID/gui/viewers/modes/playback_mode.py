@@ -2535,7 +2535,7 @@ class PlaybackMode(BaseMode):
         return display_frame
     
     def draw_player_box(self, display_frame: np.ndarray, bbox: tuple, color: tuple, player_id: int, team: str, name: str) -> np.ndarray:
-        """Draw player bounding box with shrink factor, custom colors, and opacity"""
+        """Draw player bounding box with shrink factor, custom colors, opacity, and per-player settings"""
         x1, y1, x2, y2 = bbox
         
         # Apply shrink factor
@@ -2550,9 +2550,33 @@ class PlaybackMode(BaseMode):
             x2 -= shrink_x
             y2 -= shrink_y
         
+        # Get per-player visualization settings
+        per_player_thickness = None
+        per_player_color = None
+        if name:
+            try:
+                from team_roster_manager import TeamRosterManager
+                roster_manager = TeamRosterManager()
+                player_data = roster_manager.roster.get(name, {})
+                viz_settings = player_data.get("visualization_settings", {})
+                
+                # Per-player box thickness
+                if viz_settings.get("box_thickness"):
+                    per_player_thickness = viz_settings["box_thickness"]
+                
+                # Per-player custom color (overrides global)
+                if viz_settings.get("use_custom_color") and viz_settings.get("custom_color_rgb"):
+                    rgb = viz_settings["custom_color_rgb"]
+                    if isinstance(rgb, list) and len(rgb) == 3:
+                        per_player_color = (rgb[2], rgb[1], rgb[0])  # RGB to BGR
+            except Exception:
+                pass
+        
         # Get box color based on color mode and custom color settings
         color_mode = self.viz_color_mode.get()
-        if color_mode == "custom" and self.use_custom_box_color.get():
+        if per_player_color:
+            box_color = per_player_color
+        elif color_mode == "custom" and self.use_custom_box_color.get():
             box_color = (self.box_color_b.get(), self.box_color_g.get(), self.box_color_r.get())
         elif color_mode == "team" and self.use_custom_box_color.get():
             # In team mode, custom box color overrides team color
@@ -2560,8 +2584,8 @@ class PlaybackMode(BaseMode):
         else:
             box_color = color
         
-        # Get thickness
-        thickness = self.box_thickness.get()
+        # Get thickness (per-player or global)
+        thickness = per_player_thickness if per_player_thickness is not None else self.box_thickness.get()
         
         # Apply opacity if not fully opaque
         alpha = self.player_viz_alpha.get() / 255.0
