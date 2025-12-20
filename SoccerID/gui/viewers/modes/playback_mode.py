@@ -1287,8 +1287,10 @@ class PlaybackMode(BaseMode):
                             if target_frame < self.video_manager.total_frames:
                                 frames_to_buffer.append(target_frame)
                     else:
-                        # When not playing, still buffer nearby frames for smooth navigation
-                        for offset in range(1, min(self.buffer_read_ahead // 2, 30) + 1):
+                        # When paused, buffer nearby frames for smooth navigation
+                        # Buffer more frames when paused to ensure smooth navigation
+                        buffer_range = min(self.buffer_read_ahead, 50)  # Buffer up to 50 frames when paused
+                        for offset in range(1, buffer_range + 1):
                             target_frame = current_frame + offset
                             if target_frame < self.video_manager.total_frames:
                                 frames_to_buffer.append(target_frame)
