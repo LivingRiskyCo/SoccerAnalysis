@@ -86,18 +86,28 @@ class UnifiedViewer:
         # Configure initial mode
         self.switch_mode(mode)
         
-        # Auto-load video and CSV if provided
-        if video_path and self.video_manager.load_video(video_path):
-            self.current_frame_num = 0
-            self.load_frame(0)
+        # Auto-load video and CSV if provided (after mode is initialized)
+        self.root.after(100, self._auto_load_files, video_path, csv_path)
+    
+    def _auto_load_files(self, video_path=None, csv_path=None):
+        """Auto-load video and CSV files after UI is ready"""
+        if video_path and os.path.exists(video_path):
+            if self.video_manager.load_video(video_path):
+                self.current_frame_num = 0
+                if self.current_mode_instance:
+                    self.current_mode_instance.on_video_loaded()
+                self.load_frame(0)
         
-        if csv_path:
-            self.csv_manager.load_csv(csv_path)
-            # Extract player assignments from CSV
-            csv_assignments = self.csv_manager.extract_player_assignments()
-            for pid_str, (player_name, team, jersey_number) in csv_assignments.items():
-                if pid_str not in self.approved_mappings:
-                    self.approved_mappings[pid_str] = (player_name, team, jersey_number)
+        if csv_path and os.path.exists(csv_path):
+            if self.csv_manager.load_csv(csv_path):
+                # Extract player assignments from CSV
+                csv_assignments = self.csv_manager.extract_player_assignments()
+                for pid_str, (player_name, team, jersey_number) in csv_assignments.items():
+                    if pid_str not in self.approved_mappings:
+                        self.approved_mappings[pid_str] = (player_name, team, jersey_number)
+                # Notify current mode instance
+                if self.current_mode_instance:
+                    self.current_mode_instance.on_csv_loaded()
     
     def create_ui(self):
         """Create unified UI with mode selector"""

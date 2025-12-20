@@ -85,6 +85,10 @@ class SoccerAnalysisGUI:
         # Initialize all variables
         self._init_variables()
         
+        # Project management
+        self.current_project_path = None
+        self.current_project_name = tk.StringVar(value="No Project")
+        
         # Initialize action history for undo/redo
         self.action_history = ActionHistory() if ActionHistory else None
         
@@ -2131,6 +2135,43 @@ Playback Viewer:
         # Use unified viewer in setup mode
         self.open_unified_viewer(mode='setup')
     
+    def _get_project_paths(self):
+        """Get video and CSV paths from current project or settings"""
+        video_path = None
+        csv_path = None
+        
+        # First, try from current input/output file settings
+        if hasattr(self, 'input_file') and self.input_file.get():
+            video_path = self.input_file.get()
+            if video_path and not os.path.exists(video_path):
+                video_path = None  # File doesn't exist, ignore it
+        
+        if hasattr(self, 'output_file') and self.output_file.get():
+            csv_path = self.output_file.get()
+            if csv_path and not os.path.exists(csv_path):
+                csv_path = None  # File doesn't exist, ignore it
+        
+        # If not found, try from loaded project
+        if (not video_path or not csv_path) and hasattr(self, 'current_project_path') and self.current_project_path:
+            try:
+                import json
+                with open(self.current_project_path, 'r') as f:
+                    project_data = json.load(f)
+                if 'analysis_settings' in project_data:
+                    if not video_path:
+                        video_path = project_data['analysis_settings'].get('input_file', '')
+                        if video_path and not os.path.exists(video_path):
+                            video_path = None
+                    if not csv_path:
+                        csv_path = project_data['analysis_settings'].get('output_file', '')
+                        if csv_path and not os.path.exists(csv_path):
+                            csv_path = None
+            except Exception as e:
+                # Silently fail - project file might be corrupted or missing
+                pass
+        
+        return video_path, csv_path
+    
     def open_unified_viewer(self, mode='setup', video_path=None, csv_path=None):
         """Open unified viewer with specified mode"""
         try:
@@ -2160,11 +2201,13 @@ Playback Viewer:
         viewer_window.title("Unified Player Viewer")
         viewer_window.geometry("1920x1200")
         
-        # Get video and CSV paths from project if available
-        if not video_path and hasattr(self, 'input_file_var'):
-            video_path = self.input_file_var.get()
-        if not csv_path and hasattr(self, 'output_file_var'):
-            csv_path = self.output_file_var.get()
+        # Get video and CSV paths from project/current settings if not provided
+        if not video_path or not csv_path:
+            proj_video, proj_csv = self._get_project_paths()
+            if not video_path:
+                video_path = proj_video
+            if not csv_path:
+                csv_path = proj_csv
         
         viewer = UnifiedViewer(viewer_window, mode=mode, video_path=video_path, csv_path=csv_path)
         
