@@ -885,10 +885,26 @@ class PlaybackMode(BaseMode):
         
         # Calculate position and size
         position = position.lower()
-        banner_height = min(self.analytics_banner_height.get(), h - 20)
-        bar_width = min(self.analytics_bar_width.get(), w - 20)
-        panel_width = min(self.analytics_panel_width.get(), w - 20)
-        panel_height = min(self.analytics_panel_height.get(), h - 20)
+        # Safe getters with defaults to prevent TclError on empty strings
+        try:
+            banner_height = min(self.analytics_banner_height.get() or 500, h - 20)
+        except (tk.TclError, ValueError):
+            banner_height = min(500, h - 20)
+        
+        try:
+            bar_width = min(self.analytics_bar_width.get() or 250, w - 20)
+        except (tk.TclError, ValueError):
+            bar_width = min(250, w - 20)
+        
+        try:
+            panel_width = min(self.analytics_panel_width.get() or 300, w - 20)
+        except (tk.TclError, ValueError):
+            panel_width = min(300, w - 20)
+        
+        try:
+            panel_height = min(self.analytics_panel_height.get() or 200, h - 20)
+        except (tk.TclError, ValueError):
+            panel_height = min(200, h - 20)
         
         if position == "top_banner":
             pos = (0, 0)
@@ -921,9 +937,22 @@ class PlaybackMode(BaseMode):
         cv2.addWeighted(overlay, 0.6, display_frame, 0.4, 0, display_frame)
         
         # Draw analytics
-        font_scale = self.analytics_font_scale.get()
-        thickness = self.analytics_font_thickness.get()
-        font_face_str = self.analytics_font_face.get()
+        # Safe getters with defaults to prevent TclError on empty strings
+        try:
+            font_scale = self.analytics_font_scale.get() or 0.6
+        except (tk.TclError, ValueError):
+            font_scale = 0.6
+        
+        try:
+            thickness = self.analytics_font_thickness.get() or 1
+        except (tk.TclError, ValueError):
+            thickness = 1
+        
+        try:
+            font_face_str = self.analytics_font_face.get() or "FONT_HERSHEY_SIMPLEX"
+        except (tk.TclError, ValueError):
+            font_face_str = "FONT_HERSHEY_SIMPLEX"
+        
         font_face = getattr(cv2, font_face_str, cv2.FONT_HERSHEY_SIMPLEX)
         
         (text_width, text_height), _ = cv2.getTextSize("Test", font_face, font_scale, thickness)
@@ -931,7 +960,8 @@ class PlaybackMode(BaseMode):
         
         analytics_color = self._get_analytics_color_bgr()
         text_x = pos[0] + 10
-        text_y = pos[1] + 25
+        # Start text_y inside the background box (account for text baseline)
+        text_y = pos[1] + text_height + 10
         
         # Draw title for panels
         if position not in ["top_banner", "bottom_banner"]:
@@ -951,7 +981,8 @@ class PlaybackMode(BaseMode):
                 column_width = panel_size[0] // num_players
                 for i, (player_name, analytics_lines, player_color, player_id) in enumerate(players_to_draw):
                     column_x = pos[0] + i * column_width + 10
-                    column_y = pos[1] + 10
+                    # Start column_y inside the background box, accounting for text baseline
+                    column_y = pos[1] + text_height + 10
                     
                     # Draw player name with color
                     name_text = f"{player_name}:"
@@ -973,7 +1004,8 @@ class PlaybackMode(BaseMode):
                 column_width = panel_size[0] // num_players
                 for i, (player_name, analytics_lines, player_color, player_id) in enumerate(players_to_draw):
                     column_x = pos[0] + i * column_width + 10
-                    column_y = pos[1] + 10
+                    # Start column_y inside the background box, accounting for text baseline
+                    column_y = pos[1] + text_height + 10
                     
                     # Draw player name with color
                     name_text = f"{player_name}:"
