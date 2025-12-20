@@ -1560,15 +1560,27 @@ class PlaybackMode(BaseMode):
         self.update_display()
     
     def on_video_loaded(self):
+        """Called when video is loaded - preserve current frame position"""
         if self.video_manager.total_frames > 0:
+            # Preserve current frame position (don't reset to 0 if video was already loaded)
+            current_frame = self.viewer.current_frame_num
+            if current_frame >= self.video_manager.total_frames:
+                current_frame = 0
+            
             if self.frame_var is not None:
-                self.frame_var.set(0)
+                self.frame_var.set(current_frame)
+            
             # Update frame slider range
             if self.frame_slider is not None:
                 self.frame_slider.config(to=max(100, self.video_manager.total_frames - 1))
+            
             if self.frame_label is not None:
-                self.frame_label.config(text=f"Frame: 0 / {self.video_manager.total_frames - 1}")
-            self.goto_frame(0)
+                total_frames = self.video_manager.total_frames - 1
+                self.frame_label.config(text=f"Frame: {current_frame} / {total_frames}")
+            
+            # Load current frame (preserves position)
+            self.goto_frame(current_frame)
+            
             if self.status_label is not None:
                 self.status_label.config(text=f"Video loaded: {self.video_manager.total_frames} frames")
             

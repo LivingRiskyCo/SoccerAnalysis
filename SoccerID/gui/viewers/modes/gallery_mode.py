@@ -166,9 +166,42 @@ class GalleryMode(BaseMode):
         self.gallery_listbox.bind('<<ListboxSelect>>', self.on_gallery_player_select)
         self.gallery_listbox.bind('<Double-Button-1>', self.on_gallery_player_double_click)
         
-        # Navigation
-        nav_frame = ttk.LabelFrame(gallery_frame, text="Navigation", padding=5)
+        # Navigation and Playback Controls
+        nav_frame = ttk.LabelFrame(gallery_frame, text="Navigation & Playback", padding=5)
         nav_frame.pack(fill=tk.X, pady=5)
+        
+        # Playback controls
+        playback_buttons = ttk.Frame(nav_frame)
+        playback_buttons.pack(fill=tk.X, pady=2)
+        
+        self.play_button = ttk.Button(playback_buttons, text="▶ Play", command=self.toggle_play, width=8)
+        self.play_button.pack(side=tk.LEFT, padx=2)
+        self.is_playing = False
+        self.play_after_id = None
+        self.playback_speed = 1.0
+        
+        ttk.Button(playback_buttons, text="⏮ First", command=self.first_frame, width=8).pack(side=tk.LEFT, padx=2)
+        ttk.Button(playback_buttons, text="◄◄", command=self.prev_frame, width=4).pack(side=tk.LEFT, padx=2)
+        ttk.Button(playback_buttons, text="►►", command=self.next_frame, width=4).pack(side=tk.LEFT, padx=2)
+        ttk.Button(playback_buttons, text="Last ⏭", command=self.last_frame, width=8).pack(side=tk.LEFT, padx=2)
+        
+        # Frame slider
+        frame_slider_frame = ttk.Frame(nav_frame)
+        frame_slider_frame.pack(fill=tk.X, pady=5)
+        
+        ttk.Label(frame_slider_frame, text="Frame:").pack(side=tk.LEFT, padx=2)
+        self.frame_var = tk.IntVar(value=0)
+        self.frame_slider = ttk.Scale(frame_slider_frame, from_=0, to=100, 
+                                     orient=tk.HORIZONTAL, variable=self.frame_var,
+                                     command=self.on_slider_change, length=200)
+        self.frame_slider.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
+        
+        self.frame_label = ttk.Label(frame_slider_frame, text="Frame: 0 / 0", width=15)
+        self.frame_label.pack(side=tk.LEFT, padx=2)
+        
+        # Goto frame entry
+        goto_frame = ttk.Frame(nav_frame)
+        goto_frame.pack(fill=tk.X, pady=2)
         
         nav_buttons = ttk.Frame(nav_frame)
         nav_buttons.pack(fill=tk.X)

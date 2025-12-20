@@ -171,6 +171,9 @@ class UnifiedViewer:
                 self.current_mode_instance = None
                 return
         
+        # Save current frame position before switching modes
+        saved_frame_num = self.current_frame_num
+        
         # Initialize new mode
         try:
             if mode == 'setup':
@@ -206,6 +209,13 @@ class UnifiedViewer:
                     self.csv_manager,
                     self.anchor_manager
                 )
+            
+            # Restore frame position after mode is initialized
+            if self.current_mode_instance and self.video_manager.cap:
+                self.current_frame_num = saved_frame_num
+                # Load the frame in the new mode
+                self.root.after(100, lambda: self.load_frame(saved_frame_num))
+                
         except Exception as e:
             import traceback
             error_msg = f"Error initializing {mode} mode: {e}\n\n{traceback.format_exc()}"
@@ -228,9 +238,11 @@ class UnifiedViewer:
             filetypes=[("Video files", "*.mp4 *.avi *.mov *.mkv"), ("All files", "*.*")]
         )
         if filename:
-            if self.video_manager.load_video(filename):
+            # Only reset frame if video path changed
+            if self.video_manager.video_path != filename:
                 self.current_frame_num = 0
-                self.load_frame(0)
+            if self.video_manager.load_video(filename):
+                self.load_frame(self.current_frame_num)
                 if self.current_mode_instance:
                     self.current_mode_instance.on_video_loaded()
     

@@ -1506,14 +1506,23 @@ class SetupMode(BaseMode):
             self.display_frame(frame, self.viewer.current_frame_num)
     
     def on_video_loaded(self):
+        """Called when video is loaded - preserve current frame position"""
         if self.video_manager.total_frames > 0:
-            self.frame_var.set(0)
+            # Preserve current frame position (don't reset to 0 if video was already loaded)
+            current_frame = self.viewer.current_frame_num
+            if current_frame >= self.video_manager.total_frames:
+                current_frame = 0
+            
+            self.frame_var.set(current_frame)
+            
             # Update spinbox range
             for widget in self.parent_frame.winfo_children():
                 for child in widget.winfo_children():
                     if isinstance(child, ttk.Spinbox):
                         child.config(to=self.video_manager.total_frames - 1)
-            self.load_frame(0)
+            
+            # Load current frame (preserves position)
+            self.load_frame(current_frame)
             self.status_label.config(text=f"Video loaded: {self.video_manager.total_frames} frames")
             
             # Auto-load seed data
