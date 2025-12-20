@@ -180,6 +180,10 @@ class PlaybackMode(BaseMode):
         self.show_labels_var = tk.BooleanVar(value=True)
         self.show_trajectories_var = tk.BooleanVar(value=False)
         
+        # Separate controls for boxes and circles (like legacy viewer)
+        self.show_bounding_boxes = tk.BooleanVar(value=True)  # Show bounding boxes
+        self.show_circles_at_feet = tk.BooleanVar(value=True)  # Show circles at feet
+        
         # Player visualization style (needed in create_ui)
         self.player_viz_style = tk.StringVar(value="box")  # "box" or "circle"
         self.viz_color_mode = tk.StringVar(value="team")  # "team", "track", "custom"
