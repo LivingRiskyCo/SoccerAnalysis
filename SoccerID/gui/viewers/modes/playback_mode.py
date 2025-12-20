@@ -447,6 +447,16 @@ class PlaybackMode(BaseMode):
                        variable=self.show_players_var,
                        command=self.update_display).pack(anchor=tk.W)
         
+        # Separate controls for boxes and circles (like legacy viewer)
+        boxes_circles_frame = ttk.Frame(overlay_frame)
+        boxes_circles_frame.pack(fill=tk.X, padx=10, pady=2)
+        ttk.Checkbutton(boxes_circles_frame, text="Show Bounding Boxes", 
+                       variable=self.show_bounding_boxes,
+                       command=self.update_display).pack(anchor=tk.W)
+        ttk.Checkbutton(boxes_circles_frame, text="Show Circles at Feet", 
+                       variable=self.show_circles_at_feet,
+                       command=self.update_display).pack(anchor=tk.W)
+        
         ttk.Checkbutton(overlay_frame, text="Show Ball", 
                        variable=self.show_ball_var,
                        command=self.update_display).pack(anchor=tk.W)
