@@ -1354,7 +1354,14 @@ class PlaybackMode(BaseMode):
         frame_num = max(0, min(frame_num, self.video_manager.total_frames - 1))
         if self.frame_var is not None:
             self.frame_var.set(frame_num)
-        self.viewer.load_frame(frame_num)
+        
+        # Update frame label
+        if self.frame_label is not None:
+            self.frame_label.config(text=f"Frame: {frame_num} / {self.video_manager.total_frames - 1}")
+        
+        # Use buffered frame loading for smooth playback
+        self.viewer.current_frame_num = frame_num
+        self.update_display()
     
     def on_video_loaded(self):
         if self.video_manager.total_frames > 0:
@@ -1636,19 +1643,6 @@ class PlaybackMode(BaseMode):
         except:
             pass
     
-    def goto_frame(self, frame_num=None):
-        """Go to specific frame"""
-        if frame_num is None:
-            try:
-                frame_num = int(self.goto_frame_var.get())
-            except:
-                frame_num = self.frame_var.get()
-        
-        frame_num = max(0, min(frame_num, self.video_manager.total_frames - 1))
-        self.frame_var.set(frame_num)
-        self.frame_slider.config(to=max(100, self.video_manager.total_frames - 1))
-        self.frame_label.config(text=f"Frame: {frame_num} / {self.video_manager.total_frames - 1}")
-        self.viewer.load_frame(frame_num)
     
     # ==================== CANVAS INTERACTIONS ====================
     
