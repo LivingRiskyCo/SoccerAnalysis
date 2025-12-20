@@ -286,12 +286,12 @@ class PlaybackMode(BaseMode):
             self.play_button.pack(side=tk.LEFT, padx=2)
         
         # First/Last frame buttons
-        ttk.Button(playback_controls_bar, text="⏮ First", command=self.first_frame, width=8).pack(side=tk.LEFT, padx=2)
-        ttk.Button(playback_controls_bar, text="⏭ Last", command=self.last_frame, width=8).pack(side=tk.LEFT, padx=2)
+        ttk.Button(playback_controls_bar, text="⏮ First", command=self.first_frame, width=12).pack(side=tk.LEFT, padx=2)
+        ttk.Button(playback_controls_bar, text="⏭ Last", command=self.last_frame, width=12).pack(side=tk.LEFT, padx=2)
         
         # Previous/Next frame buttons
-        ttk.Button(playback_controls_bar, text="◀◀", command=self.prev_frame, width=4).pack(side=tk.LEFT, padx=2)
-        ttk.Button(playback_controls_bar, text="▶▶", command=self.next_frame, width=4).pack(side=tk.LEFT, padx=2)
+        ttk.Button(playback_controls_bar, text="◀◀", command=self.prev_frame, width=8).pack(side=tk.LEFT, padx=2)
+        ttk.Button(playback_controls_bar, text="▶▶", command=self.next_frame, width=8).pack(side=tk.LEFT, padx=2)
         
         # Frame slider
         ttk.Label(playback_controls_bar, text="Frame:").pack(side=tk.LEFT, padx=(10, 2))
