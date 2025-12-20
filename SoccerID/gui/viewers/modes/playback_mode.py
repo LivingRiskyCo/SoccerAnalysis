@@ -1346,6 +1346,10 @@ class PlaybackMode(BaseMode):
         
         self.next_frame()
         
+        # Update buffer status during playback
+        if hasattr(self, '_update_buffer_status_label'):
+            self._update_buffer_status_label()
+        
         # Schedule next frame
         delay = int(1000 / (self.video_manager.fps * self.playback_speed))
         self.play_after_id = self.viewer.root.after(delay, self.play)
@@ -1428,13 +1432,13 @@ class PlaybackMode(BaseMode):
                     sleep_time = 0.01 if self.is_playing else 0.02  # Reduced from 0.05 to keep buffer more active
                     time.sleep(sleep_time)
                     
-                    # Update buffer status label periodically (every 10 buffer cycles)
+                    # Update buffer status label more frequently (every 2 buffer cycles for smoother updates)
                     if hasattr(self, '_buffer_update_counter'):
                         self._buffer_update_counter += 1
                     else:
                         self._buffer_update_counter = 0
                     
-                    if self._buffer_update_counter >= 10:
+                    if self._buffer_update_counter >= 2:
                         self._buffer_update_counter = 0
                         # Schedule UI update on main thread
                         if hasattr(self, 'viewer') and self.viewer.root:
@@ -1514,6 +1518,10 @@ class PlaybackMode(BaseMode):
             self.frame_slider.config(command='')
             self.frame_var.set(frame_num)
             self.frame_slider.config(command=old_command)
+        
+        # Update buffer status when frame changes
+        if hasattr(self, '_update_buffer_status_label'):
+            self._update_buffer_status_label()
         
         # Use buffered frame loading for smooth playback
         self.viewer.current_frame_num = frame_num
