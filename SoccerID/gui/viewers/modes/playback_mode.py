@@ -889,23 +889,76 @@ class PlaybackMode(BaseMode):
         
         # Draw analytics for each player
         max_players = 8 if position in ["top_banner", "bottom_banner"] else 10
-        for i, (player_name, analytics_lines, player_color, player_id) in enumerate(all_analytics[:max_players]):
-            # Draw player name with color
-            name_text = f"{player_name}:"
-            cv2.putText(display_frame, name_text, (text_x, text_y), font_face, font_scale,
-                       player_color, thickness)
-            
-            # Draw analytics lines
-            for j, line in enumerate(analytics_lines[:3]):  # Limit to 3 lines per player
-                line_y = text_y + (j + 1) * line_height
-                if line_y > pos[1] + panel_size[1] - 10:
+        players_to_draw = all_analytics[:max_players]
+        
+        if position == "bottom_banner":
+            # Horizontal layout for bottom banner
+            num_players = len(players_to_draw)
+            if num_players > 0:
+                column_width = panel_size[0] // num_players
+                for i, (player_name, analytics_lines, player_color, player_id) in enumerate(players_to_draw):
+                    column_x = pos[0] + i * column_width + 10
+                    column_y = pos[1] + 10
+                    
+                    # Draw player name with color
+                    name_text = f"{player_name}:"
+                    cv2.putText(display_frame, name_text, (column_x, column_y), font_face, font_scale,
+                               player_color, thickness)
+                    
+                    # Draw analytics lines
+                    for j, line in enumerate(analytics_lines[:3]):  # Limit to 3 lines per player
+                        line_y = column_y + (j + 1) * line_height
+                        if line_y > pos[1] + panel_size[1] - 10:
+                            break
+                        cv2.putText(display_frame, line, (column_x, line_y), font_face, font_scale * 0.9,
+                                   analytics_color, thickness)
+        
+        elif position == "top_banner":
+            # Vertical layout for top banner with proper spacing
+            for i, (player_name, analytics_lines, player_color, player_id) in enumerate(players_to_draw):
+                # Calculate spacing - ensure enough room for analytics
+                lines_per_player = min(len(analytics_lines), 3)
+                player_height = (lines_per_player + 1) * line_height + 20  # Name + lines + spacing
+                
+                # Check if we have room
+                if text_y + player_height > pos[1] + panel_size[1] - 10:
                     break
-                cv2.putText(display_frame, line, (text_x + 10, line_y), font_face, font_scale * 0.9,
-                           analytics_color, thickness)
-            
-            text_y += len(analytics_lines[:3]) * line_height + 15
-            if text_y > pos[1] + panel_size[1] - 10:
-                break
+                
+                # Draw player name with color
+                name_text = f"{player_name}:"
+                cv2.putText(display_frame, name_text, (text_x, text_y), font_face, font_scale,
+                           player_color, thickness)
+                
+                # Draw analytics lines
+                for j, line in enumerate(analytics_lines[:3]):  # Limit to 3 lines per player
+                    line_y = text_y + (j + 1) * line_height
+                    if line_y > pos[1] + panel_size[1] - 10:
+                        break
+                    cv2.putText(display_frame, line, (text_x + 10, line_y), font_face, font_scale * 0.9,
+                               analytics_color, thickness)
+                
+                # Move to next player with proper spacing
+                text_y += player_height
+        
+        else:
+            # Vertical layout for panels/bars
+            for i, (player_name, analytics_lines, player_color, player_id) in enumerate(players_to_draw):
+                # Draw player name with color
+                name_text = f"{player_name}:"
+                cv2.putText(display_frame, name_text, (text_x, text_y), font_face, font_scale,
+                           player_color, thickness)
+                
+                # Draw analytics lines
+                for j, line in enumerate(analytics_lines[:3]):  # Limit to 3 lines per player
+                    line_y = text_y + (j + 1) * line_height
+                    if line_y > pos[1] + panel_size[1] - 10:
+                        break
+                    cv2.putText(display_frame, line, (text_x + 10, line_y), font_face, font_scale * 0.9,
+                               analytics_color, thickness)
+                
+                text_y += len(analytics_lines[:3]) * line_height + 15
+                if text_y > pos[1] + panel_size[1] - 10:
+                    break
         
         return display_frame
     

@@ -69,18 +69,23 @@ class SplashScreen:
                 label.image = photo  # Keep a reference
                 label.pack()
                 
-                # Set window size to image size
+                # Set window size to image size and center immediately
                 self.splash.geometry(f"{img.width}x{img.height}")
+                self.splash.update_idletasks()  # Force update to get actual size
+                
+                # Center window on screen
+                self._center_window()
             except Exception as e:
                 print(f"Could not load splash image: {e}")
                 # Fallback: Create simple text splash
                 self._create_text_splash()
+                self.splash.update_idletasks()
+                self._center_window()
         else:
             # Fallback: Create simple text splash
             self._create_text_splash()
-        
-        # Center window on screen
-        self._center_window()
+            self.splash.update_idletasks()
+            self._center_window()
         
         # Make window stay on top
         self.splash.attributes('-topmost', True)
