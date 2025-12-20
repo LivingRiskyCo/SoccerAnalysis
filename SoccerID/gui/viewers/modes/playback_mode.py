@@ -1914,26 +1914,39 @@ class PlaybackMode(BaseMode):
                 pass
     
     def _update_buffer_status_label(self):
-        """Update buffer status label"""
+        """Update buffer status label with accurate percentage"""
         try:
-            if not hasattr(self, 'buffer_status_label') or not self.buffer_status_label.winfo_exists():
+            if not hasattr(self, 'buffer_status_label') or self.buffer_status_label is None:
                 return
             
-            buffer_size = len(self.frame_buffer)
-            buffer_max = self.buffer_max_size
+            if not hasattr(self.buffer_status_label, 'winfo_exists') or not self.buffer_status_label.winfo_exists():
+                return
             
-            fill_pct = int((buffer_size / buffer_max) * 100) if buffer_max > 0 else 0
+            with self.buffer_lock:
+                buffer_size = len(self.frame_buffer)
+                buffer_max = self.buffer_max_size
             
+            # Calculate accurate percentage
+            if buffer_max > 0:
+                fill_pct = round((buffer_size / buffer_max) * 100, 1)  # One decimal place for accuracy
+            else:
+                fill_pct = 0.0
+            
+            # Color coding based on fill percentage
             if fill_pct < 30:
                 color = "red"
             elif fill_pct < 60:
                 color = "orange"
-            else:
+            elif fill_pct < 90:
                 color = "green"
+            else:
+                color = "darkgreen"
             
-            status_text = f"{buffer_size}/{buffer_max} ({fill_pct}%)"
+            # Format status text with percentage
+            status_text = f"{buffer_size}/{buffer_max} ({fill_pct:.1f}%)"
             self.buffer_status_label.config(text=status_text, foreground=color)
-        except (tk.TclError, AttributeError):
+        except (tk.TclError, AttributeError, RuntimeError):
+            # Widget may have been destroyed
             pass
     
     def _sync_box_color(self):
