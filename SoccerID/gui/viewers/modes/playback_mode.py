@@ -359,8 +359,8 @@ class PlaybackMode(BaseMode):
                                      command=self.on_slider_change, length=200)
         self.frame_slider.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
         
-        self.frame_label = ttk.Label(playback_controls_bar, text="Frame: 0 / 0", width=15)
-        self.frame_label.pack(side=tk.LEFT, padx=2)
+        self.frame_label = ttk.Label(playback_controls_bar, text="Frame: 0 / 0", width=20)
+        self.frame_label.pack(side=tk.LEFT, padx=5)
         
         # Goto frame entry
         ttk.Label(playback_controls_bar, text="Goto:").pack(side=tk.LEFT, padx=(10, 2))
@@ -1502,9 +1502,18 @@ class PlaybackMode(BaseMode):
         if self.frame_var is not None:
             self.frame_var.set(frame_num)
         
-        # Update frame label
+        # Update frame label and slider position
         if self.frame_label is not None:
-            self.frame_label.config(text=f"Frame: {frame_num} / {self.video_manager.total_frames - 1}")
+            total_frames = self.video_manager.total_frames - 1 if self.video_manager.total_frames > 0 else 0
+            self.frame_label.config(text=f"Frame: {frame_num} / {total_frames}")
+        
+        # Update slider position (without triggering on_slider_change callback)
+        if self.frame_slider is not None and self.frame_var is not None:
+            # Temporarily disable command to avoid recursive calls
+            old_command = self.frame_slider.cget('command')
+            self.frame_slider.config(command='')
+            self.frame_var.set(frame_num)
+            self.frame_slider.config(command=old_command)
         
         # Use buffered frame loading for smooth playback
         self.viewer.current_frame_num = frame_num
