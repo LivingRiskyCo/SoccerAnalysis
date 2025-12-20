@@ -1792,9 +1792,14 @@ class PlaybackMode(BaseMode):
         """Handle frame slider change"""
         try:
             frame_num = int(float(value))
-            self.frame_var.set(frame_num)
-            self.frame_label.config(text=f"Frame: {frame_num} / {self.video_manager.total_frames - 1}")
-        except:
+            total_frames = self.video_manager.total_frames - 1 if self.video_manager.total_frames > 0 else 0
+            # Only update if slider was manually moved (not programmatically)
+            if self.frame_var.get() != frame_num:
+                self.frame_var.set(frame_num)
+                self.frame_label.config(text=f"Frame: {frame_num} / {total_frames}")
+                # Jump to the frame
+                self.goto_frame(frame_num)
+        except Exception as e:
             pass
     
     def update_speed(self):
