@@ -214,12 +214,23 @@ class GalleryMode(BaseMode):
         goto_frame = ttk.Frame(nav_frame)
         goto_frame.pack(fill=tk.X, pady=2)
         
-        nav_buttons = ttk.Frame(nav_frame)
-        nav_buttons.pack(fill=tk.X)
-        ttk.Button(nav_buttons, text="◄◄ First", command=self.first_frame).pack(side=tk.LEFT, padx=2)
-        ttk.Button(nav_buttons, text="◄ Prev", command=self.prev_frame).pack(side=tk.LEFT, padx=2)
-        ttk.Button(nav_buttons, text="Next ►", command=self.next_frame).pack(side=tk.LEFT, padx=2)
-        ttk.Button(nav_buttons, text="Last ►►", command=self.last_frame).pack(side=tk.LEFT, padx=2)
+        ttk.Label(goto_frame, text="Goto:").pack(side=tk.LEFT, padx=2)
+        self.goto_frame_var = tk.StringVar()
+        goto_entry = ttk.Entry(goto_frame, textvariable=self.goto_frame_var, width=8)
+        goto_entry.pack(side=tk.LEFT, padx=2)
+        goto_entry.bind("<Return>", lambda e: self.goto_frame())
+        ttk.Button(goto_frame, text="Go", command=self.goto_frame, width=4).pack(side=tk.LEFT, padx=2)
+        
+        # Speed control
+        speed_frame = ttk.Frame(nav_frame)
+        speed_frame.pack(fill=tk.X, pady=2)
+        
+        ttk.Label(speed_frame, text="Speed:").pack(side=tk.LEFT, padx=2)
+        self.speed_var = tk.DoubleVar(value=1.0)
+        speed_spin = ttk.Spinbox(speed_frame, from_=0.25, to=4.0, increment=0.25,
+                                 textvariable=self.speed_var, width=8)
+        speed_spin.pack(side=tk.LEFT, padx=2)
+        self.speed_var.trace_add('write', lambda *args: self.update_speed())
         
         # Selection info
         self.selection_label = ttk.Label(gallery_frame, text="No player selected", foreground="gray")
