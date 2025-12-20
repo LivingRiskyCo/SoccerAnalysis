@@ -685,23 +685,9 @@ class PlaybackMode(BaseMode):
             if self.show_ball_trail.get():
                 display_frame = self.draw_ball_trail(display_frame, frame_num)
             
-            # Draw players
+            # Draw players with full visualization options
             if self.show_players_var.get():
-                player_data = self.csv_manager.get_player_data(frame_num)
-                for player_id, (x, y, team, name, bbox) in player_data.items():
-                    # Convert coordinates if normalized
-                    if 0.0 <= x <= 1.0 and 0.0 <= y <= 1.0:
-                        x = int(x * self.video_manager.width)
-                        y = int(y * self.video_manager.height)
-                    
-                    # Draw circle at player position
-                    color = self.get_player_color(int(player_id), team, name)
-                    cv2.circle(display_frame, (int(x), int(y)), 10, color, 2)
-                    
-                    # Draw label
-                    if self.show_labels_var.get() and name:
-                        cv2.putText(display_frame, name, (int(x) + 15, int(y)),
-                                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+                display_frame = self.draw_players_with_visualization(display_frame, frame_num)
             
             # Draw ball
             if self.show_ball_var.get():
@@ -2434,6 +2420,290 @@ class PlaybackMode(BaseMode):
     def stop_pan(self, canvas_num: int):
         """Stop panning"""
         pass
+    
+    # ==================== VISUALIZATION DRAWING FUNCTIONS ====================
+    
+    def draw_players_with_visualization(self, display_frame: np.ndarray, frame_num: int) -> np.ndarray:
+        """Draw players with all visualization options"""
+        if not self.csv_manager.is_loaded():
+            return display_frame
+        
+        player_data = self.csv_manager.get_player_data(frame_num)
+        h, w = display_frame.shape[:2]
+        
+        for player_id, (x, y, team, name, bbox) in player_data.items():
+            # Convert coordinates if normalized
+            if 0.0 <= x <= 1.0 and 0.0 <= y <= 1.0:
+                x = int(x * w)
+                y = int(y * h)
+            else:
+                x = int(x)
+                y = int(y)
+            
+            # Get player color
+            color = self.get_player_color(int(player_id), team, name)
+            
+            # Draw based on visualization style
+            viz_style = self.player_viz_style.get()
+            
+            if viz_style == "box" and bbox:
+                # Draw box with shrink factor
+                display_frame = self.draw_player_box(display_frame, bbox, color, int(player_id), team, name)
+            elif viz_style == "circle":
+                # Draw circle at player position
+                display_frame = self.draw_player_circle(display_frame, (x, y), color, int(player_id), team, name)
+            
+            # Draw ellipse if enabled
+            if self.ellipse_width.get() > 0 and self.ellipse_height.get() > 0:
+                display_frame = self.draw_player_ellipse(display_frame, (x, y), color)
+            
+            # Draw feet marker with all effects
+            feet_y = y + self.feet_marker_vertical_offset.get()
+            display_frame = self.draw_feet_marker(display_frame, (x, feet_y), color, frame_num)
+            
+            # Draw direction arrow if enabled
+            if self.show_direction_arrow.get():
+                display_frame = self.draw_direction_arrow(display_frame, (x, y), frame_num, int(player_id))
+            
+            # Draw label with customization
+            if self.show_labels_var.get() and name:
+                display_frame = self.draw_player_label(display_frame, (x, y), int(player_id), team, name, color)
+        
+        return display_frame
+    
+    def draw_player_box(self, display_frame: np.ndarray, bbox: tuple, color: tuple, player_id: int, team: str, name: str) -> np.ndarray:
+        """Draw player bounding box with shrink factor and custom colors"""
+        x1, y1, x2, y2 = bbox
+        
+        # Apply shrink factor
+        shrink = self.box_shrink_factor.get()
+        if shrink > 0:
+            width = x2 - x1
+            height = y2 - y1
+            shrink_x = int(width * shrink)
+            shrink_y = int(height * shrink)
+            x1 += shrink_x
+            y1 += shrink_y
+            x2 -= shrink_x
+            y2 -= shrink_y
+        
+        # Get box color
+        if self.use_custom_box_color.get():
+            box_color = (self.box_color_b.get(), self.box_color_g.get(), self.box_color_r.get())
+        else:
+            box_color = color
+        
+        # Get thickness
+        thickness = self.box_thickness.get()
+        
+        # Draw box
+        cv2.rectangle(display_frame, (int(x1), int(y1)), (int(x2), int(y2)), box_color, thickness)
+        
+        return display_frame
+    
+    def draw_player_circle(self, display_frame: np.ndarray, center: tuple, color: tuple, player_id: int, team: str, name: str) -> np.ndarray:
+        """Draw player circle"""
+        x, y = center
+        radius = 10
+        
+        # Circles always use team colors (not custom box color)
+        cv2.circle(display_frame, (int(x), int(y)), radius, color, 2)
+        
+        return display_frame
+    
+    def draw_player_ellipse(self, display_frame: np.ndarray, center: tuple, color: tuple) -> np.ndarray:
+        """Draw ellipse at player feet"""
+        x, y = center
+        axes_w = self.ellipse_width.get()
+        axes_h = self.ellipse_height.get()
+        outline_thickness = self.ellipse_outline_thickness.get()
+        
+        cv2.ellipse(display_frame, (int(x), int(y)), (axes_w, axes_h), 0, 0, 360, color, outline_thickness)
+        
+        return display_frame
+    
+    def draw_feet_marker(self, display_frame: np.ndarray, center: tuple, color: tuple, frame_num: int) -> np.ndarray:
+        """Draw enhanced feet marker with all effects"""
+        import math
+        x, y = center
+        style = self.feet_marker_style.get()
+        opacity = self.feet_marker_opacity.get()
+        
+        # Base size
+        base_radius = 8
+        
+        # Apply pulse effect if enabled
+        if self.feet_marker_enable_pulse.get():
+            pulse_phase = (frame_num * self.feet_marker_pulse_speed.get() / 60.0) % (2 * math.pi)
+            pulse_scale = 1.0 + 0.2 * math.sin(pulse_phase)
+            base_radius = int(base_radius * pulse_scale)
+        
+        # Draw shadow if enabled
+        if self.feet_marker_enable_shadow.get():
+            shadow_offset = self.feet_marker_shadow_offset.get()
+            shadow_opacity = self.feet_marker_shadow_opacity.get()
+            shadow_color = (0, 0, 0)
+            shadow_x = x + shadow_offset
+            shadow_y = y + shadow_offset
+            
+            overlay = display_frame.copy()
+            cv2.circle(overlay, (shadow_x, shadow_y), base_radius, shadow_color, -1)
+            cv2.addWeighted(overlay, shadow_opacity / 255.0, display_frame, 
+                           1 - (shadow_opacity / 255.0), 0, display_frame)
+        
+        # Draw glow if enabled
+        if self.feet_marker_enable_glow.get():
+            glow_intensity = self.feet_marker_glow_intensity.get()
+            glow_size = int(glow_intensity / 10)
+            for i in range(glow_size, 0, -1):
+                glow_alpha = (glow_intensity / 100.0) * (1.0 - i / max(1, glow_size))
+                glow_color = tuple(int(c * (1.0 + glow_alpha)) for c in color)
+                cv2.circle(display_frame, (int(x), int(y)), base_radius + i, glow_color, 2)
+        
+        # Draw main marker based on style
+        if style == "circle":
+            if opacity < 255:
+                overlay = display_frame.copy()
+                cv2.circle(overlay, (int(x), int(y)), base_radius, color, -1)
+                cv2.addWeighted(overlay, opacity / 255.0, display_frame, 1 - (opacity / 255.0), 0, display_frame)
+            else:
+                cv2.circle(display_frame, (int(x), int(y)), base_radius, color, -1)
+        elif style == "diamond":
+            points = np.array([
+                [x, y - base_radius],
+                [x + base_radius, y],
+                [x, y + base_radius],
+                [x - base_radius, y]
+            ], np.int32)
+            if opacity < 255:
+                overlay = display_frame.copy()
+                cv2.fillPoly(overlay, [points], color)
+                cv2.addWeighted(overlay, opacity / 255.0, display_frame, 1 - (opacity / 255.0), 0, display_frame)
+            else:
+                cv2.fillPoly(display_frame, [points], color)
+        elif style == "star":
+            import math
+            outer_radius = base_radius
+            inner_radius = base_radius // 2
+            points = []
+            for i in range(10):
+                angle = i * math.pi / 5
+                r = outer_radius if i % 2 == 0 else inner_radius
+                px = int(x + r * math.cos(angle))
+                py = int(y + r * math.sin(angle))
+                points.append([px, py])
+            if opacity < 255:
+                overlay = display_frame.copy()
+                cv2.fillPoly(overlay, [np.array(points, np.int32)], color)
+                cv2.addWeighted(overlay, opacity / 255.0, display_frame, 1 - (opacity / 255.0), 0, display_frame)
+            else:
+                cv2.fillPoly(display_frame, [np.array(points, np.int32)], color)
+        elif style == "hexagon":
+            import math
+            hex_radius = base_radius
+            points = []
+            for i in range(6):
+                angle = i * math.pi / 3
+                px = int(x + hex_radius * math.cos(angle))
+                py = int(y + hex_radius * math.sin(angle))
+                points.append([px, py])
+            if opacity < 255:
+                overlay = display_frame.copy()
+                cv2.fillPoly(overlay, [np.array(points, np.int32)], color)
+                cv2.addWeighted(overlay, opacity / 255.0, display_frame, 1 - (opacity / 255.0), 0, display_frame)
+            else:
+                cv2.fillPoly(display_frame, [np.array(points, np.int32)], color)
+        
+        # Draw particles if enabled
+        if self.feet_marker_enable_particles.get():
+            particle_count = self.feet_marker_particle_count.get()
+            import random
+            random.seed(frame_num)  # Consistent particles per frame
+            for _ in range(particle_count):
+                angle = random.uniform(0, 2 * math.pi)
+                dist = random.uniform(base_radius, base_radius * 2)
+                px = int(x + dist * math.cos(angle))
+                py = int(y + dist * math.sin(angle))
+                cv2.circle(display_frame, (px, py), 2, color, -1)
+        
+        return display_frame
+    
+    def draw_direction_arrow(self, display_frame: np.ndarray, center: tuple, frame_num: int, player_id: int) -> np.ndarray:
+        """Draw direction arrow based on player movement"""
+        import math
+        x, y = center
+        
+        # Get previous position to determine direction
+        if frame_num > 0 and self.csv_manager.is_loaded():
+            prev_data = self.csv_manager.get_player_data(frame_num - 1)
+            if player_id in prev_data:
+                prev_x, prev_y, _, _, _ = prev_data[player_id]
+                
+                # Convert if normalized
+                h, w = display_frame.shape[:2]
+                if 0.0 <= prev_x <= 1.0:
+                    prev_x = prev_x * w
+                    prev_y = prev_y * h
+                
+                # Calculate direction
+                dx = x - prev_x
+                dy = y - prev_y
+                angle = math.atan2(dy, dx)
+                
+                # Draw arrow
+                arrow_length = 20
+                arrow_tip_x = int(x + arrow_length * math.cos(angle))
+                arrow_tip_y = int(y + arrow_length * math.sin(angle))
+                
+                cv2.arrowedLine(display_frame, (int(x), int(y)), (arrow_tip_x, arrow_tip_y), (255, 255, 255), 2)
+        
+        return display_frame
+    
+    def draw_player_label(self, display_frame: np.ndarray, center: tuple, player_id: int, team: str, name: str, color: tuple) -> np.ndarray:
+        """Draw player label with customization"""
+        x, y = center
+        
+        # Get label text based on label type
+        label_type = self.label_type.get()
+        if label_type == "full_name":
+            label_text = name
+        elif label_type == "last_name":
+            label_text = name.split()[-1] if " " in name else name
+        elif label_type == "jersey":
+            # Try to extract jersey number from name or use player_id
+            label_text = f"#{player_id}"
+        elif label_type == "team":
+            label_text = team or f"#{player_id}"
+        elif label_type == "custom":
+            label_text = self.label_custom_text.get()
+        else:
+            label_text = name
+        
+        # Get label color
+        if self.use_custom_label_color.get():
+            label_color = (self.label_color_b.get(), self.label_color_g.get(), self.label_color_r.get())
+        else:
+            label_color = (255, 255, 255)  # White default
+        
+        # Get font settings
+        font_scale = self.label_font_scale.get()
+        font_thickness = 2
+        
+        # Get font face
+        font_face_str = self.label_font_face.get()
+        if font_face_str == "FONT_HERSHEY_SIMPLEX":
+            font_face = cv2.FONT_HERSHEY_SIMPLEX
+        elif font_face_str == "FONT_HERSHEY_PLAIN":
+            font_face = cv2.FONT_HERSHEY_PLAIN
+        else:
+            font_face = cv2.FONT_HERSHEY_SIMPLEX
+        
+        # Draw label
+        label_x = int(x + 15)
+        label_y = int(y)
+        cv2.putText(display_frame, label_text, (label_x, label_y), font_face, font_scale, label_color, font_thickness)
+        
+        return display_frame
     
     def close_comparison_mode(self):
         """Close comparison mode"""
