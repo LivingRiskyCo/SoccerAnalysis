@@ -1,0 +1,46 @@
+{
+  "players": {
+    "gunnar_nesbitt": {
+      "name": "Gunnar Nesbitt",
+      "jersey_number": "5",
+      "team": "Blue",
+      "position": null,
+      "notes": null,
+      "tags": null,
+      "features": null
+    },
+    "anay_rao": {
+      "name": "Anay Rao",
+      "jersey_number": "4",
+      "team": "Gray",
+      "position": null,
+      "notes": null,
+      "tags": null,
+      "features": null
+    },
+    "kevin_hill": {
+      "name": "Kevin Hill",
+      "jersey_number": "C",
+      "team": "Coach",
+      "position": null,
+      "notes": null,
+      "tags": null,
+      "features": null
+    },
+    "merritt_jones": {
+      "name": "Merritt Jones",
+      "jersey_number": "23",
+      "team": "Gray",
+      "position": null,
+      "notes": null,
+      "tags": null,
+      "features": null
+    },
+    "cameron_melnick": {
+      "name": "Cameron Melnik",
+      "jersey_number": "28",
+      "team": "Gray",
+      "position": null,
+      "notes": null,
+      "tags": null,
+      "features": 
